@@ -36,8 +36,6 @@ GEM
     multipart-post (2.0.0)
     nokogiri (1.6.3.1)
       mini_portile (= 0.6.0)
-    nsq-cluster (1.1.0)
-      sys-proctable
     oauth2 (1.0.0)
       faraday (>= 0.8, < 0.10)
       jwt (~> 1.0)
@@ -60,7 +58,6 @@ GEM
     rspec-mocks (3.0.3)
       rspec-support (~> 3.0.0)
     rspec-support (3.0.3)
-    sys-proctable (0.9.4)
     thread_safe (0.3.4)
 
 PLATFORMS
@@ -69,5 +66,4 @@ PLATFORMS
 DEPENDENCIES
   bundler (~> 1.0)
   jeweler (~> 2.0)
-  nsq-cluster (~> 1.1)
   rspec (~> 3.0)
