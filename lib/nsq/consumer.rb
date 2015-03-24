@@ -26,16 +26,20 @@ module Nsq
       # '127.0.0.1:4150') and the key is the Connection instance.
       @connections = {}
 
-      if !@nsqlookupds.empty?
+      if opts[:nsqlookupd]
+        nsqlookupds = [opts[:nsqlookupd]].flatten
         discover_repeatedly(
-          nsqlookupds: @nsqlookupds,
+          nsqlookupds: nsqlookupds,
           topic: @topic,
           interval: @discovery_interval
         )
+
+      elsif opts[:nsqd]
+        nsqds = [opts[:nsqd]].flatten
+        nsqds.each{|d| add_connection(d) }
+
       else
-        # normally, we find nsqd instances to connect to via nsqlookupd(s)
-        # in this case let's connect to an nsqd instance directly
-        add_connection(opts[:nsqd] || '127.0.0.1:4150', max_in_flight: @max_in_flight)
+        add_connection('127.0.0.1:4150')
       end
 
       at_exit{terminate}
