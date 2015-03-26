@@ -36,7 +36,7 @@ module Nsq
 
       elsif opts[:nsqd]
         nsqds = [opts[:nsqd]].flatten
-        nsqds.each{|d| add_connection(d) }
+        nsqds.each{|d| add_connection(d, max_in_flight: @max_in_flight) }
 
       else
         add_connection('127.0.0.1:4150')
