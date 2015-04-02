@@ -113,5 +113,16 @@ module Nsq
     # optional subclass hook
     def connections_changed
     end
+
+    def valid_topic_name?(name)
+      return false if name.size < 1 || name.size > 32
+      !!name.match(/^[\.a-zA-Z0-9_-]+$/)
+    end
+
+    def valid_channel_name?(name)
+      return false if name.size < 1 || name.size > 32
+      !!name.match(/^[\.a-zA-Z0-9_-]+(#ephemeral)?$/)
+    end
+
   end
 end

@@ -7,6 +7,9 @@ module Nsq
     def initialize(opts = {})
       @connections = {}
       @topic = opts[:topic] || raise(ArgumentError, 'topic is required')
+
+      raise(ArgumentError, 'invalid topic name') unless valid_topic_name?(@topic)
+
       @discovery_interval = opts[:discovery_interval] || 60
 
       nsqlookupds = []

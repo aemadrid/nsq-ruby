@@ -194,4 +194,19 @@ describe Nsq::Producer do
     end
 
   end
+
+  describe 'when using bad topic names' do
+    before do
+
+    end
+
+    it 'should throw an exception for long names' do
+      expect { Nsq::Producer.new(nsqd: 'localhost:4150', topic: 'consumer-topic-longer-than-32-characters') }.to raise_error(ArgumentError, 'invalid topic name')
+    end
+    it 'should throw an exception for invalid (characters) names' do
+      expect { Nsq::Producer.new(nsqd: 'localhost:4150', topic: 'topic-is-^*&-whack') }.to raise_error(ArgumentError, 'invalid topic name')
+    end
+  end
+
+
 end

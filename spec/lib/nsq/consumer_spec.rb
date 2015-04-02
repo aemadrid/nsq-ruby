@@ -11,10 +11,9 @@ describe Nsq::Consumer do
     @cluster.destroy
   end
 
-
   describe 'when connecting to nsqd directly' do
     before do
-      @nsqd = @cluster.nsqd.first
+      @nsqd     = @cluster.nsqd.first
       @consumer = new_consumer(nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10)
     end
     after do
@@ -26,7 +25,7 @@ describe Nsq::Consumer do
       it 'should throw an exception when trying to connect to a server that\'s down' do
         @nsqd.stop
 
-        expect{
+        expect {
           new_consumer(nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}")
         }.to raise_error
       end
@@ -41,7 +40,7 @@ describe Nsq::Consumer do
           @nsqd.pub(@consumer.topic, 'some-message')
         end
 
-        wait_for{@consumer.size >= @consumer.max_in_flight}
+        wait_for { @consumer.size >= @consumer.max_in_flight }
         expect(@consumer.size).to eq(@consumer.max_in_flight)
       end
     end
@@ -58,9 +57,9 @@ describe Nsq::Consumer do
       end
 
       it 'can pop off many messages' do
-        10.times{@nsqd.pub(@consumer.topic, 'some-message')}
+        10.times { @nsqd.pub(@consumer.topic, 'some-message') }
         assert_no_timeout(1) do
-          10.times{@consumer.pop.finish}
+          10.times { @consumer.pop.finish }
         end
       end
 
@@ -89,7 +88,6 @@ describe Nsq::Consumer do
       end
     end
   end
-
 
   describe 'when using lookupd' do
     before do
@@ -125,20 +123,19 @@ describe Nsq::Consumer do
     # This is testing the behavior of the consumer, rather than the size method itself
     describe '#size' do
       it 'doesn\'t exceed max_in_flight for the consumer' do
-        wait_for{@consumer.size >= @consumer.max_in_flight}
+        wait_for { @consumer.size >= @consumer.max_in_flight }
         expect(@consumer.size).to eq(@consumer.max_in_flight)
       end
     end
   end
 
-
   describe 'with a low message timeout' do
     before do
-      @nsqd = @cluster.nsqd.first
+      @nsqd        = @cluster.nsqd.first
       @msg_timeout = 1
-      @consumer = new_consumer(
-        nsqlookupd: nil,
-        nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}",
+      @consumer    = new_consumer(
+        nsqlookupd:  nil,
+        nsqd:        "#{@nsqd.host}:#{@nsqd.tcp_port}",
         msg_timeout: @msg_timeout * 1000 # in milliseconds
       )
     end
@@ -205,7 +202,6 @@ describe Nsq::Consumer do
     end
   end
 
-
   describe 'with a high max_in_flight and tons of messages' do
     it 'should receive all messages in a reasonable amount of time' do
       expected_messages = (1..10_000).to_a.map(&:to_s)
@@ -213,7 +209,7 @@ describe Nsq::Consumer do
         @cluster.nsqd.sample.mpub(TOPIC, *slice)
       end
 
-      consumer = new_consumer(max_in_flight: 1000)
+      consumer          = new_consumer(max_in_flight: 1000)
       received_messages = []
 
       assert_no_timeout(5) do
@@ -227,6 +223,24 @@ describe Nsq::Consumer do
       consumer.terminate
 
       expect(received_messages.sort).to eq(expected_messages.sort)
+    end
+  end
+
+  describe 'when using bad topic names' do
+    it 'should throw an exception for long names' do
+      expect { new_consumer(topic: 'consumer-topic-longer-than-32-characters') }.to raise_error(ArgumentError, 'invalid topic name')
+    end
+    it 'should throw an exception for invalid (characters) names' do
+      expect { new_consumer(topic: 'topic-is-^*&-whack') }.to raise_error(ArgumentError, 'invalid topic name')
+    end
+  end
+
+  describe 'when using bad channel names' do
+    it 'should throw an exception for long names' do
+      expect { new_consumer(channel: 'consumer-cheannel-longer-than-32-characters') }.to raise_error(ArgumentError, 'invalid channel name')
+    end
+    it 'should throw an exception for invalid (characters) names' do
+      expect { new_consumer(channel: 'channel-is-^*&-whack') }.to raise_error(ArgumentError, 'invalid channel name')
     end
   end
 

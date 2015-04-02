@@ -14,6 +14,10 @@ module Nsq
 
       @topic = opts[:topic] || raise(ArgumentError, 'topic is required')
       @channel = opts[:channel] || raise(ArgumentError, 'channel is required')
+
+      raise(ArgumentError, 'invalid topic name') unless valid_topic_name?(@topic)
+      raise(ArgumentError, 'invalid channel name') unless valid_channel_name?(@channel)
+
       @max_in_flight = opts[:max_in_flight] || 1
       @discovery_interval = opts[:discovery_interval] || 60
       @msg_timeout = opts[:msg_timeout]
