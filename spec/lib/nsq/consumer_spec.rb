@@ -244,4 +244,27 @@ describe Nsq::Consumer do
     end
   end
 
+  describe 'when waiting for empty queue' do
+    before do
+      @nsqd     = @cluster.nsqd.first
+      @consumer = new_consumer(nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10)
+    end
+    after do
+      @consumer.terminate
+    end
+    it 'should wait indefinitely without a timeout (default)' do
+      @result = nil
+      thr = Thread.new { @result = @consumer.pop }
+      sleep 1.5
+      @nsqd.pub @consumer.topic, 'some-message'
+      sleep 0.25
+      thr.join
+      expect(@result).to_not be_a Nsq::Message
+      expect(@result.body).to eq 'some-message'
+    end
+    it 'should throw an exception after timeout expires' do
+      expect { @consumer.pop(0.5) }.to raise_error(ThreadError, 'empty queue')
+    end
+  end
+
 end
