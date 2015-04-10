@@ -49,7 +49,7 @@ describe Nsq::Connection do
 
   # This is really testing the ability for Connection to reconnect
   describe '#connected?' do
-    before do
+    before(:each) do
       # For speedier timeouts
       set_speedy_connection_timeouts!
     end

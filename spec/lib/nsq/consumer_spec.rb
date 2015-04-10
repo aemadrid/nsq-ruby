@@ -4,7 +4,7 @@ require 'timeout'
 
 describe Nsq::Consumer do
 
-  before(:all) do
+  before(:each) do
     @cluster = NsqCluster.new nsqd_count: 2, nsqlookupd_count: 1, verbose: ENV['VERBOSE']
   end
 
@@ -13,14 +13,15 @@ describe Nsq::Consumer do
   end
 
   describe 'when connecting to nsqd directly' do
-    before do
+
+    before(:each) do
       @nsqd     = @cluster.nsqd.first
       @consumer = new_consumer nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10
     end
-    after do
+
+    after(:each) do
       @consumer.terminate
     end
-
 
     describe '::new' do
       it 'should throw an exception when trying to connect to a server that\'s down' do
@@ -91,7 +92,7 @@ describe Nsq::Consumer do
   end
 
   describe 'when using lookupd' do
-    before do
+    before(:each) do
       @expected_messages = (1..20).to_a.map(&:to_s)
       @expected_messages.each_with_index do |message, idx|
         @cluster.nsqd[idx % @cluster.nsqd.length].pub(TOPIC, message)
@@ -100,7 +101,7 @@ describe Nsq::Consumer do
       @consumer = new_consumer(max_in_flight: 10)
     end
 
-    after do
+    after(:each) do
       @consumer.terminate
     end
 
@@ -131,7 +132,7 @@ describe Nsq::Consumer do
   end
 
   describe 'with a low message timeout' do
-    before do
+    before(:each) do
       @nsqd        = @cluster.nsqd.first
       @msg_timeout = 1
       @consumer    = new_consumer(
@@ -140,7 +141,7 @@ describe Nsq::Consumer do
         msg_timeout: @msg_timeout * 1000 # in milliseconds
       )
     end
-    after do
+    after(:each) do
       @consumer.terminate
     end
 
@@ -246,11 +247,11 @@ describe Nsq::Consumer do
   end
 
   describe 'when waiting for empty queue' do
-    before do
+    before(:each) do
       @nsqd     = @cluster.nsqd.first
       @consumer = new_consumer(nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10)
     end
-    after do
+    after(:each) do
       @consumer.terminate
     end
     it 'should wait indefinitely without a timeout (default)' do

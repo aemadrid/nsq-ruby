@@ -2,7 +2,7 @@ require_relative '../../../spec_helper'
 
 describe Nsq::Message do
 
-  before(:all) do
+  before(:each) do
     @cluster = NsqCluster.new nsqd_count: 1, verbose: ENV['VERBOSE']
     @nsqd = @cluster.nsqd.first
   end

@@ -3,7 +3,7 @@ require_relative '../../spec_helper'
 NSQD_COUNT = 5
 
 describe Nsq::Discovery do
-  before(:all) do
+  before(:each) do
     @cluster = NsqCluster.new nsqd_count: NSQD_COUNT, nsqlookupd_count: 2, verbose: ENV['VERBOSE']
     @topic = 'some-topic'
 
@@ -22,7 +22,6 @@ describe Nsq::Discovery do
     @cluster.destroy
   end
 
-
   def new_discovery(cluster_lookupds)
     lookupds = cluster_lookupds.map do |lookupd|
       "#{lookupd.host}:#{lookupd.http_port}"
@@ -36,7 +35,7 @@ describe Nsq::Discovery do
 
 
   describe 'a single nsqlookupd' do
-    before do
+    before(:each) do
       @discovery = new_discovery([@cluster.nsqlookupd.first])
     end
 
@@ -62,7 +61,7 @@ describe Nsq::Discovery do
 
 
   describe 'multiple nsqlookupds' do
-    before do
+    before(:each) do
       @discovery = new_discovery(@cluster.nsqlookupd)
     end
 
@@ -76,7 +75,7 @@ describe Nsq::Discovery do
 
 
   describe 'multiple nsqlookupds, but one is down' do
-    before do
+    before(:each) do
       @downed_nsqlookupd = @cluster.nsqlookupd.first
       @downed_nsqlookupd.stop
 
@@ -93,7 +92,7 @@ describe Nsq::Discovery do
 
 
   describe 'when all lookupds are down' do
-    before do
+    before(:each) do
       @cluster.nsqlookupd.each(&:stop)
       @discovery = new_discovery(@cluster.nsqlookupd)
     end

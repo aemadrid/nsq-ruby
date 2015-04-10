@@ -2,7 +2,7 @@ require_relative '../../spec_helper'
 
 describe Nsq::Consumer do
 
-  before(:all) do
+  before(:each) do
     set_speedy_connection_timeouts!
 
     @nsqd_count = 3

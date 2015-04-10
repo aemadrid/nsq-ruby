@@ -24,13 +24,13 @@ describe Nsq::Producer do
       )
     end
 
-    before do
+    before(:each) do
       @cluster  = NsqCluster.new(nsqd_count: 1)
       @nsqd     = @cluster.nsqd.first
       @producer = new_producer(@nsqd)
     end
 
-    after do
+    after(:each) do
       @producer.terminate if @producer
       @cluster.destroy
     end
@@ -138,7 +138,7 @@ describe Nsq::Producer do
 
   context 'connecting via nsqlookupd' do
 
-    before(:all) do
+    before(:each) do
       @cluster  = NsqCluster.new nsqd_count: 2, nsqlookupd_count: 1, verbose: ENV['VERBOSE']
       @producer = new_lookupd_producer
 
@@ -196,7 +196,7 @@ describe Nsq::Producer do
   end
 
   describe 'when using bad topic names' do
-    before do
+    before(:each) do
 
     end
 
