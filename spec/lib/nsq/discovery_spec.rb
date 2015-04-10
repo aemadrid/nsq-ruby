@@ -1,116 +1,97 @@
 # -*- encoding: utf-8 -*-
 require_relative '../../spec_helper'
 
-NSQD_COUNT = 5
-
 describe Nsq::Discovery do
-  before(:each) do
-    @cluster = NsqCluster.new nsqd_count: NSQD_COUNT, nsqlookupd_count: 2, verbose: ENV['VERBOSE']
-    @topic = 'some-topic'
 
-    # make sure each nsqd has a message for this topic
-    # leave the last nsqd without this topic for testing
-    @cluster.nsqd.take(NSQD_COUNT-1).each do |nsqd|
-      nsqd.pub(@topic, 'some-message')
+  let(:nsqd_count) { 5 }
+
+  let(:topic) { 'some-topic' }
+  let!(:cluster) do
+    NsqCluster.new(nsqd_count: nsqd_count, nsqlookupd_count: 2).tap do |c|
+      c.nsqd.take(nsqd_count - 1).each { |nsqd| nsqd.pub(topic, 'some-message') }
+      c.nsqd.last.pub('some-other-topic', 'some-message')
     end
-    @cluster.nsqd.last.pub('some-other-topic', 'some-message')
-
-    @expected_topic_lookup_nsqds = @cluster.nsqd.take(NSQD_COUNT-1).map{|d|"#{d.host}:#{d.tcp_port}"}.sort
-    @expected_all_nsqds = @cluster.nsqd.map{|d|"#{d.host}:#{d.tcp_port}"}.sort
   end
+  let(:expected_topic_lookup_nsqds) { cluster.nsqd.take(nsqd_count - 1).map { |d| "#{d.host}:#{d.tcp_port}" }.sort }
+  let(:expected_all_nsqds) { cluster.nsqd.map { |d| "#{d.host}:#{d.tcp_port}" }.sort }
 
   after(:each) do
-    @cluster.destroy
+    cluster.destroy
   end
 
   def new_discovery(cluster_lookupds)
-    lookupds = cluster_lookupds.map do |lookupd|
-      "#{lookupd.host}:#{lookupd.http_port}"
-    end
+    lookupds = cluster_lookupds.map { |lookupd| "#{lookupd.host}:#{lookupd.http_port}" }
 
     # one lookupd has scheme and one does not
     lookupds.last.prepend 'http://'
 
-    Nsq::Discovery.new(lookupds)
+    Nsq::Discovery.new lookupds
   end
 
-
   describe 'a single nsqlookupd' do
-    before(:each) do
-      @discovery = new_discovery([@cluster.nsqlookupd.first])
-    end
+    let(:discovery) { new_discovery [cluster.nsqlookupd.first] }
 
     describe '#nsqds' do
       it 'returns all nsqds' do
-        nsqds = @discovery.nsqds
-        expect(nsqds.sort).to eq(@expected_all_nsqds)
+        nsqds = discovery.nsqds.sort
+        expect(nsqds).to eq(expected_all_nsqds)
       end
     end
 
     describe '#nsqds_for_topic' do
       it 'returns [] for a topic that doesn\'t exist' do
-        nsqds = @discovery.nsqds_for_topic('topic-that-does-not-exists')
+        nsqds = discovery.nsqds_for_topic('topic-that-does-not-exists')
         expect(nsqds).to eq([])
       end
 
       it 'returns all nsqds' do
-        nsqds = @discovery.nsqds_for_topic(@topic)
-        expect(nsqds.sort).to eq(@expected_topic_lookup_nsqds)
+        nsqds = discovery.nsqds_for_topic(topic)
+        expect(nsqds.sort).to eq(expected_topic_lookup_nsqds)
       end
     end
   end
 
 
   describe 'multiple nsqlookupds' do
-    before(:each) do
-      @discovery = new_discovery(@cluster.nsqlookupd)
-    end
+    let(:discovery) { new_discovery cluster.nsqlookupd }
 
     describe '#nsqds_for_topic' do
       it 'returns all nsqds' do
-        nsqds = @discovery.nsqds_for_topic(@topic)
-        expect(nsqds.sort).to eq(@expected_topic_lookup_nsqds)
+        nsqds = discovery.nsqds_for_topic(topic)
+        expect(nsqds.sort).to eq(expected_topic_lookup_nsqds)
       end
     end
   end
 
 
   describe 'multiple nsqlookupds, but one is down' do
-    before(:each) do
-      @downed_nsqlookupd = @cluster.nsqlookupd.first
-      @downed_nsqlookupd.stop
-
-      @discovery = new_discovery(@cluster.nsqlookupd)
-    end
+    let(:discovery) { new_discovery cluster.nsqlookupd }
+    let!(:downed_nsqlookupd) { cluster.nsqlookupd.first.tap { |x| x.stop } }
 
     describe '#nsqds_for_topic' do
       it 'returns all nsqds' do
-        nsqds = @discovery.nsqds_for_topic(@topic)
-        expect(nsqds.sort).to eq(@expected_topic_lookup_nsqds)
+        nsqds = discovery.nsqds_for_topic(topic)
+        expect(nsqds.sort).to eq(expected_topic_lookup_nsqds)
       end
     end
   end
 
 
   describe 'when all lookupds are down' do
+    let(:discovery) { new_discovery cluster.nsqlookupd }
     before(:each) do
-      @cluster.nsqlookupd.each(&:stop)
-      @discovery = new_discovery(@cluster.nsqlookupd)
+      cluster.nsqlookupd.each(&:stop)
     end
 
     describe '#nsqds' do
       it 'throws an exception' do
-        expect {
-          @discovery.nsqds
-        }.to raise_error(Nsq::DiscoveryException)
+        expect { discovery.nsqds }.to raise_error(Nsq::DiscoveryException)
       end
     end
 
     describe '#nsqds_for_topic' do
       it 'throws an exception' do
-        expect {
-          @discovery.nsqds_for_topic(@topic)
-        }.to raise_error(Nsq::DiscoveryException)
+        expect { discovery.nsqds_for_topic(topic) }.to raise_error(Nsq::DiscoveryException)
       end
     end
   end
