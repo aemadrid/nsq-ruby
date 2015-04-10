@@ -14,6 +14,10 @@ install:
   - wget http://bitly-downloads.s3.amazonaws.com/nsq/$NSQ_DOWNLOAD.tar.gz
   - tar zxvf $NSQ_DOWNLOAD.tar.gz
   - export PATH=$NSQ_DOWNLOAD/bin:$PATH
+  - bundle install --jobs=3 --retry=3
+
+script:
+  - bundle exec rake spec
 
 notifications:
   email: true
