@@ -2,11 +2,11 @@ require_relative '../../spec_helper'
 
 describe Nsq::Consumer do
 
-  before do
+  before(:all) do
     set_speedy_connection_timeouts!
 
     @nsqd_count = 3
-    @cluster = NsqCluster.new(nsqlookupd_count: 2, nsqd_count: @nsqd_count)
+    @cluster = NsqCluster.new nsqlookupd_count: 2, nsqd_count: @nsqd_count, verbose: ENV['VERBOSE']
 
     # publish a message to each queue
     # so that when the consumer starts up, it will connect to all of them
@@ -18,7 +18,7 @@ describe Nsq::Consumer do
     wait_for{@consumer.connections.length == @nsqd_count}
   end
 
-  after do
+  after(:each) do
     @consumer.terminate
     @cluster.destroy
   end

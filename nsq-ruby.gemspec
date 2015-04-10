@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]
   s.authors = ["Wistia"]
-  s.date = "2015-02-16"
+  s.date = "2015-04-09"
   s.description = ""
   s.email = "dev@wistia.com"
   s.extra_rdoc_files = [
@@ -32,11 +32,12 @@ Gem::Specification.new do |s|
     "lib/nsq/frames/response.rb",
     "lib/nsq/logger.rb",
     "lib/nsq/producer.rb",
+    "lib/nsq/queue_with_timeout.rb",
     "lib/version.rb"
   ]
   s.homepage = "http://github.com/wistia/nsq-ruby"
   s.licenses = ["MIT"]
-  s.rubygems_version = "2.2.2"
+  s.rubygems_version = "2.4.5"
   s.summary = "Ruby client library for NSQ"
 
   if s.respond_to? :specification_version then

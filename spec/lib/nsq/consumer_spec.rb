@@ -3,18 +3,19 @@ require 'json'
 require 'timeout'
 
 describe Nsq::Consumer do
-  before do
-    @cluster = NsqCluster.new(nsqd_count: 2, nsqlookupd_count: 1)
+
+  before(:all) do
+    @cluster = NsqCluster.new nsqd_count: 2, nsqlookupd_count: 1, verbose: ENV['VERBOSE']
   end
 
-  after do
+  after(:each) do
     @cluster.destroy
   end
 
   describe 'when connecting to nsqd directly' do
     before do
       @nsqd     = @cluster.nsqd.first
-      @consumer = new_consumer(nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10)
+      @consumer = new_consumer nsqlookupd: nil, nsqd: "#{@nsqd.host}:#{@nsqd.tcp_port}", max_in_flight: 10
     end
     after do
       @consumer.terminate
@@ -259,7 +260,7 @@ describe Nsq::Consumer do
       @nsqd.pub @consumer.topic, 'some-message'
       sleep 0.25
       thr.join
-      expect(@result).to_not be_a Nsq::Message
+      expect(@result).to be_a Nsq::Message
       expect(@result.body).to eq 'some-message'
     end
     it 'should throw an exception after timeout expires' do

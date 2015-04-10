@@ -1,35 +1,36 @@
 require_relative '../../spec_helper'
 
 describe Nsq::Connection do
-  before do
-    @cluster = NsqCluster.new(nsqd_count: 1)
-    @nsqd = @cluster.nsqd.first
-    @connection = Nsq::Connection.new(host: @cluster.nsqd[0].host, port: @cluster.nsqd[0].tcp_port)
+
+  before(:each) do
+    @cluster    = NsqCluster.new nsqd_count: 1, verbose: ENV['VERBOSE']
+    @nsqd       = @cluster.nsqd.first
+    @connection = Nsq::Connection.new host: @cluster.nsqd[0].host, port: @cluster.nsqd[0].tcp_port
   end
-  after do
+
+  after(:each) do
     @connection.close
     @cluster.destroy
   end
-
 
   describe '::new' do
     it 'should raise an exception if it cannot connect to nsqd' do
       @nsqd.stop
 
-      expect{
+      expect {
         Nsq::Connection.new(host: @nsqd.host, port: @nsqd.tcp_port)
       }.to raise_error
     end
 
     it 'should raise an exception if it connects to something that isn\'t nsqd' do
-      expect{
+      expect {
         # try to connect to the HTTP port instead of TCP
         Nsq::Connection.new(host: @nsqd.host, port: @nsqd.http_port)
       }.to raise_error
     end
 
     it 'should raise an exception if max_in_flight is above what the server supports' do
-      expect{
+      expect {
         # try to connect to the HTTP port instead of TCP
         Nsq::Connection.new(host: @nsqd.host, port: @nsqd.tcp_port, max_in_flight: 1_000_000)
       }.to raise_error
@@ -39,8 +40,8 @@ describe Nsq::Connection do
 
   describe '#close' do
     it 'can be called multiple times, without issue' do
-      expect{
-        10.times{@connection.close}
+      expect {
+        10.times { @connection.close }
       }.not_to raise_error
     end
   end
@@ -54,13 +55,13 @@ describe Nsq::Connection do
     end
 
     it 'should return true when nsqd is up and false when nsqd is down' do
-      wait_for{@connection.connected?}
+      wait_for { @connection.connected? }
       expect(@connection.connected?).to eq(true)
       @nsqd.stop
-      wait_for{!@connection.connected?}
+      wait_for { !@connection.connected? }
       expect(@connection.connected?).to eq(false)
       @nsqd.start
-      wait_for{@connection.connected?}
+      wait_for { @connection.connected? }
       expect(@connection.connected?).to eq(true)
     end
 
