@@ -21,6 +21,9 @@ script:
 
 notifications:
   email:
-    - aemadrid@gmail.com
+    recipients:
+      - aemadrid@gmail.com
+    on_success: change
+    on_failure: change
 
 sudo: false
