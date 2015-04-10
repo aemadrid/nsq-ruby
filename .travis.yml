@@ -20,6 +20,7 @@ script:
   - bundle exec rake spec
 
 notifications:
-  email: true
+  email:
+    - aemadrid@gmail.com
 
 sudo: false
