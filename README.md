@@ -1,5 +1,7 @@
 # nsq-ruby
 
+[![Build Status](https://travis-ci.org/aemadrid/nsq-ruby.svg)](https://travis-ci.org/aemadrid/nsq-ruby)
+
 nsq-ruby is a simple NSQ client library written in Ruby.
 
 - The code is straightforward.
