@@ -3,37 +3,28 @@ require_relative '../../spec_helper'
 
 describe Nsq::Connection do
 
-  before(:each) do
-    @cluster    = NsqCluster.new nsqd_count: 1, verbose: ENV['VERBOSE']
-    @nsqd       = @cluster.nsqd.first
-    @connection = Nsq::Connection.new host: @cluster.nsqd[0].host, port: @cluster.nsqd[0].tcp_port
-  end
+  let(:cluster_options) { { nsqd_count: 1 } }
 
-  after(:each) do
-    @connection.close
-    @cluster.destroy
-  end
-
-  describe '::new' do
+  describe '#new' do
     it 'should raise an exception if it cannot connect to nsqd' do
-      @nsqd.stop
+      nsqd.stop
 
       expect {
-        Nsq::Connection.new(host: @nsqd.host, port: @nsqd.tcp_port)
+        Nsq::Connection.new(host: nsqd.host, port: nsqd.tcp_port)
       }.to raise_error
     end
 
     it 'should raise an exception if it connects to something that isn\'t nsqd' do
       expect {
         # try to connect to the HTTP port instead of TCP
-        Nsq::Connection.new(host: @nsqd.host, port: @nsqd.http_port)
+        Nsq::Connection.new(host: nsqd.host, port: nsqd.http_port)
       }.to raise_error
     end
 
     it 'should raise an exception if max_in_flight is above what the server supports' do
       expect {
         # try to connect to the HTTP port instead of TCP
-        Nsq::Connection.new(host: @nsqd.host, port: @nsqd.tcp_port, max_in_flight: 1_000_000)
+        Nsq::Connection.new(host: nsqd.host, port: nsqd.tcp_port, max_in_flight: 1_000_000)
       }.to raise_error
     end
   end
@@ -42,7 +33,7 @@ describe Nsq::Connection do
   describe '#close' do
     it 'can be called multiple times, without issue' do
       expect {
-        10.times { @connection.close }
+        10.times { connection.close }
       }.not_to raise_error
     end
   end
@@ -50,20 +41,17 @@ describe Nsq::Connection do
 
   # This is really testing the ability for Connection to reconnect
   describe '#connected?' do
-    before(:each) do
-      # For speedier timeouts
-      set_speedy_connection_timeouts!
-    end
+    before(:each) { set_speedy_connection_timeouts! }
 
     it 'should return true when nsqd is up and false when nsqd is down' do
-      wait_for { @connection.connected? }
-      expect(@connection.connected?).to eq(true)
-      @nsqd.stop
-      wait_for { !@connection.connected? }
-      expect(@connection.connected?).to eq(false)
-      @nsqd.start
-      wait_for { @connection.connected? }
-      expect(@connection.connected?).to eq(true)
+      wait_for { connection.connected? }
+      expect(connection.connected?).to eq(true)
+      nsqd.stop
+      wait_for { !connection.connected? }
+      expect(connection.connected?).to eq(false)
+      nsqd.start
+      wait_for { connection.connected? }
+      expect(connection.connected?).to eq(true)
     end
 
   end
@@ -76,14 +64,14 @@ describe Nsq::Connection do
         (0..MAX_VALID_TYPE).each do |type|
           expect(
             described_class::FRAME_CLASSES.include?(
-              @connection.send(:frame_class_for_type, type)
+              connection.send(:frame_class_for_type, type)
             )
           ).to be_truthy
         end
       end
       it "raises an error if invalid type > #{MAX_VALID_TYPE} specified" do
         expect {
-          @connection.send(:frame_class_for_type, 3)
+          connection.send(:frame_class_for_type, 3)
         }.to raise_error(RuntimeError)
       end
     end
@@ -91,9 +79,9 @@ describe Nsq::Connection do
 
     describe '#handle_response' do
       it 'responds to heartbeat with NOP' do
-        frame = Nsq::Response.new(described_class::RESPONSE_HEARTBEAT, @connection)
-        expect(@connection).to receive(:nop)
-        @connection.send(:handle_response, frame)
+        frame = Nsq::Response.new(described_class::RESPONSE_HEARTBEAT, connection)
+        expect(connection).to receive(:nop)
+        connection.send(:handle_response, frame)
       end
     end
   end
