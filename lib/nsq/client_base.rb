@@ -115,12 +115,12 @@ module Nsq
     end
 
     def valid_topic_name?(name)
-      return false if name.size < 1 || name.size > 32
+      return false if name.size < 1 || name.size > 64
       !!name.match(/^[\.a-zA-Z0-9_-]+$/)
     end
 
     def valid_channel_name?(name)
-      return false if name.size < 1 || name.size > 32
+      return false if name.size < 1 || name.size > 64
       !!name.match(/^[\.a-zA-Z0-9_-]+(#ephemeral)?$/)
     end
 
