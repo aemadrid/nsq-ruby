@@ -31,8 +31,8 @@ module Nsq
       @msg_timeout = opts[:msg_timeout] || 60_000 # 60s
       @max_in_flight = opts[:max_in_flight] || 1
 
-      if @msg_timeout < 100
-        raise ArgumentError, 'msg_timeout cannot be less than 100. it\'s in milliseconds.'
+      if @msg_timeout < 1_000
+        raise ArgumentError, 'msg_timeout cannot be less than 1_000. it\'s in milliseconds.'
       end
 
       # for outgoing communication
