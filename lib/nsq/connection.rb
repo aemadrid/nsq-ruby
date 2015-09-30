@@ -17,18 +17,17 @@ module Nsq
     attr_accessor :max_in_flight
     attr_reader :presumed_in_flight
 
-    USER_AGENT = "nsq-ruby/#{Nsq::Version::STRING}"
+    USER_AGENT         = "nsq-ruby/#{Nsq::Version::STRING}"
     RESPONSE_HEARTBEAT = '_heartbeat_'
-    RESPONSE_OK = 'OK'
-
+    RESPONSE_OK        = 'OK'
 
     def initialize(opts = {})
-      @host = opts[:host] || (raise ArgumentError, 'host is required')
-      @port = opts[:port] || (raise ArgumentError, 'host is required')
-      @queue = opts[:queue]
-      @topic = opts[:topic]
-      @channel = opts[:channel]
-      @msg_timeout = opts[:msg_timeout] || 60_000 # 60s
+      @host          = opts[:host] || (raise ArgumentError, 'host is required')
+      @port          = opts[:port] || (raise ArgumentError, 'host is required')
+      @queue         = opts[:queue]
+      @topic         = opts[:topic]
+      @channel       = opts[:channel]
+      @msg_timeout   = opts[:msg_timeout] || 60_000 # 60s
       @max_in_flight = opts[:max_in_flight] || 1
 
       if @msg_timeout < 1_000
@@ -43,18 +42,16 @@ module Nsq
       # threads (from write_loop and read_loop to connect_and_monitor).
       @death_queue = Queue.new
 
-      @connected = false
+      @connected          = false
       @presumed_in_flight = 0
 
       open_connection
       start_monitoring_connection
     end
 
-
     def connected?
       @connected
     end
-
 
     # close the connection and don't try to re-open it
     def close
@@ -62,38 +59,31 @@ module Nsq
       close_connection
     end
 
-
     def sub(topic, channel)
       write "SUB #{topic} #{channel}\n"
     end
 
-
     def rdy(count)
       write "RDY #{count}\n"
     end
-
 
     def fin(message_id)
       write "FIN #{message_id}\n"
       decrement_in_flight
     end
 
-
     def req(message_id, timeout)
       write "REQ #{message_id} #{timeout}\n"
       decrement_in_flight
     end
 
-
     def touch(message_id)
       write "TOUCH #{message_id}\n"
     end
 
-
     def pub(topic, message)
       write ["PUB #{topic}\n", message.bytesize, message].pack('a*l>a*')
     end
-
 
     def mpub(topic, messages)
       body = messages.map do |message|
@@ -102,7 +92,6 @@ module Nsq
 
       write ["MPUB #{topic}\n", body.bytesize, messages.size, body].pack('a*l>l>a*')
     end
-
 
     # Tell the server we are ready for more messages!
     def re_up_ready
@@ -113,50 +102,45 @@ module Nsq
       @presumed_in_flight = @max_in_flight
     end
 
-
     private
 
     def cls
       write "CLS\n"
     end
 
-
     def nop
       write "NOP\n"
     end
 
-
     def write(raw)
       @write_queue.push(raw)
     end
-
 
     def write_to_socket(raw)
       debug ">>> #{raw.inspect}"
       @socket.write(raw)
     end
 
-
     def identify
       hostname = Socket.gethostname
       metadata = {
-        client_id: Socket.gethostbyname(hostname).flatten.compact.first,
-        hostname: hostname,
-        feature_negotiation: true,
-        heartbeat_interval: 30_000, # 30 seconds
-        output_buffer: 16_000, # 16kb
+        client_id:             Socket.gethostbyname(hostname).flatten.compact.first,
+        hostname:              hostname,
+        feature_negotiation:   true,
+        heartbeat_interval:    30_000, # 30 seconds
+        output_buffer:         16_000, # 16kb
         output_buffer_timeout: 250, # 250ms
-        tls_v1: false,
-        snappy: false,
-        deflate: false,
-        sample_rate: 0, # disable sampling
-        user_agent: USER_AGENT,
-        msg_timeout: @msg_timeout
+        tls_v1:                false,
+        snappy:                false,
+        deflate:               false,
+        sample_rate:           0, # disable sampling
+        user_agent:            USER_AGENT,
+        msg_timeout:           @msg_timeout
       }.to_json
       write_to_socket ["IDENTIFY\n", metadata.length, metadata].pack('a*l>a*')
 
       # Now wait for the response!
-      frame = receive_frame
+      frame  = receive_frame
       server = JSON.parse(frame.data)
 
       if @max_in_flight > server['max_rdy_count']
@@ -165,7 +149,6 @@ module Nsq
 
       @server_version = server['version']
     end
-
 
     def handle_response(frame)
       if frame.data == RESPONSE_HEARTBEAT
@@ -178,24 +161,22 @@ module Nsq
       end
     end
 
-
     def receive_frame
       if buffer = @socket.read(8)
-        size, type = buffer.unpack('l>l>')
-        size -= 4 # we want the size of the data part and type already took up 4 bytes
-        data = @socket.read(size)
+        size, type  = buffer.unpack('l>l>')
+        size        -= 4 # we want the size of the data part and type already took up 4 bytes
+        data        = @socket.read(size)
         frame_class = frame_class_for_type(type)
         return frame_class.new(data, self)
       end
     end
 
-
     FRAME_CLASSES = [Response, Error, Message]
+
     def frame_class_for_type(type)
       raise "Bad frame type specified: #{type}" if type > FRAME_CLASSES.length - 1
       [Response, Error, Message][type]
     end
-
 
     def decrement_in_flight
       @presumed_in_flight -= 1
@@ -207,17 +188,14 @@ module Nsq
       end
     end
 
-
     def start_read_loop
-      @read_loop_thread ||= Thread.new{read_loop}
+      @read_loop_thread ||= Thread.new { read_loop }
     end
-
 
     def stop_read_loop
       @read_loop_thread.kill if @read_loop_thread
       @read_loop_thread = nil
     end
-
 
     def read_loop
       loop do
@@ -237,11 +215,9 @@ module Nsq
       die(ex)
     end
 
-
     def start_write_loop
-      @write_loop_thread ||= Thread.new{write_loop}
+      @write_loop_thread ||= Thread.new { write_loop }
     end
-
 
     def stop_write_loop
       @stop_write_loop = true
@@ -249,10 +225,9 @@ module Nsq
       @write_loop_thread = nil
     end
 
-
     def write_loop
       @stop_write_loop = false
-      data = nil
+      data             = nil
       loop do
         data = @write_queue.pop
         write_to_socket(data)
@@ -267,19 +242,16 @@ module Nsq
       die(ex)
     end
 
-
     # Waits for death of connection
     def start_monitoring_connection
-      @connection_monitor_thread ||= Thread.new{monitor_connection}
+      @connection_monitor_thread                    ||= Thread.new { monitor_connection }
       @connection_monitor_thread.abort_on_exception = true
     end
-
 
     def stop_monitoring_connection
       @connection_monitor_thread.kill if @connection_monitor_thread
       @connection_monitor = nil
     end
-
 
     def monitor_connection
       loop do
@@ -297,7 +269,6 @@ module Nsq
       end
     end
 
-
     # close the connection if it's not already closed and try to reconnect
     # over and over until we succeed!
     def reconnect
@@ -306,7 +277,6 @@ module Nsq
         open_connection
       end
     end
-
 
     def open_connection
       @socket = TCPSocket.new(@host, @port)
@@ -327,16 +297,14 @@ module Nsq
       end
     end
 
-
     # closes the connection and stops listening for messages
     def close_connection
       cls if connected?
       stop_read_loop
       stop_write_loop
-      @socket = nil
+      @socket    = nil
       @connected = false
     end
-
 
     # this is called when there's a connection error in the read or write loop
     # it triggers `connect_and_monitor` to try to reconnect
@@ -345,25 +313,24 @@ module Nsq
       @death_queue.push(reason)
     end
 
-
     # Retry the supplied block with exponential backoff.
     #
     # Borrowed liberally from:
     # https://github.com/ooyala/retries/blob/master/lib/retries.rb
     def with_retries(&block)
       base_sleep_seconds = 0.5
-      max_sleep_seconds = 300 # 5 minutes
+      max_sleep_seconds  = 300 # 5 minutes
 
       # Let's do this thing
-      attempts = 0
-      start_time = Time.now
+      attempts           = 0
+      start_time         = Time.now
 
       begin
         attempts += 1
         return block.call(attempts)
 
       rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
-             Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT, Timeout::Error => ex
+        Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT, Timeout::Error => ex
 
         raise ex if attempts >= 100
 
@@ -383,12 +350,10 @@ module Nsq
       end
     end
 
-
     # Se we can stub for testing and reconnect in a tight loop
     def snooze(t)
       sleep(t)
     end
-
 
     def server_needs_rdy_re_ups?
       # versions less than 0.3.0 need RDY re-ups

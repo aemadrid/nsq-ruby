@@ -1,6 +1,7 @@
 # From http://spin.atomicobject.com/2014/07/07/ruby-queue-pop-timeout/
 
 require 'thread'
+require 'timeout'
 
 module Nsq
   class QueueWithTimeout
@@ -33,7 +34,7 @@ module Nsq
         if @queue.empty?
           @recieved.wait(@mutex, timeout) if timeout != 0
           # if we're still empty after the timeout, raise exception
-          raise ThreadError, 'empty queue' if @queue.empty?
+          raise Timeout::Error, 'empty queue' if @queue.empty?
         end
         @queue.shift
       end

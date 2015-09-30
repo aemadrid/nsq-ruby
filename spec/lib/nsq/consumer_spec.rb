@@ -225,7 +225,7 @@ describe Nsq::Consumer do
       expect(result.body).to eq 'some-message'
     end
     it 'should throw an exception after timeout expires' do
-      expect { consumer.pop(0.5) }.to raise_error(ThreadError, 'empty queue')
+      expect { consumer.pop(0.5) }.to raise_error(Timeout::Error, 'empty queue')
     end
   end
 
