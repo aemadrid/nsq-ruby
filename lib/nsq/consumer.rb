@@ -24,7 +24,7 @@ module Nsq
       @msg_timeout        = opts[:msg_timeout]
 
       # This is where we queue up the messages we receive from each connection
-      @messages           = opts[:queue] || Nsq::QueueWithTimeout.new
+      @messages           = opts[:queue] || Queue.new
 
       # This is where we keep a record of our active nsqd connections
       # The key is a string with the host and port of the instance (e.g.
@@ -51,12 +51,8 @@ module Nsq
     end
 
     # pop the next message off the queue
-    def pop(timeout = nil)
-      if timeout
-        @messages.pop_with_timeout timeout
-      else
-        @messages.pop
-      end
+    def pop(non_block = false)
+      @messages.pop non_block
     end
 
     # returns the number of messages we have locally in the queue
