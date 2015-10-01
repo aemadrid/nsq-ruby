@@ -1,5 +1,5 @@
 require_relative 'client_base'
-require_relative 'queue_with_timeout'
+require 'thread'
 
 module Nsq
   class Consumer < ClientBase
@@ -24,7 +24,7 @@ module Nsq
       @msg_timeout        = opts[:msg_timeout]
 
       # This is where we queue up the messages we receive from each connection
-      @messages           = opts[:queue] || Queue.new
+      @messages           = opts[:queue] || ::Queue.new
 
       # This is where we keep a record of our active nsqd connections
       # The key is a string with the host and port of the instance (e.g.
