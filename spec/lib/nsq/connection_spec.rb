@@ -1,19 +1,17 @@
 # -*- encoding: utf-8 -*-
-require_relative '../../spec_helper'
 
-describe Nsq::Connection do
-
-  let(:cluster_options) { { nsqd_count: 1 } }
+describe Nsq::Connection, cluster: true do
 
   describe '#new' do
     it 'should raise an exception if it cannot connect to nsqd' do
-      nsqd.stop
-
+      @cluster.halt!
       expect {
-        Nsq::Connection.new(host: nsqd.host, port: nsqd.tcp_port)
-      }.to raise_error
+        Nsq::Connection.new host: @cluster.host, port: @cluster.nsqd_tcp_port
+      }.to raise_error Errno::ECONNREFUSED
     end
+  end
 
+=begin
     it 'should raise an exception if it connects to something that isn\'t nsqd' do
       expect {
         # try to connect to the HTTP port instead of TCP
@@ -27,9 +25,10 @@ describe Nsq::Connection do
         Nsq::Connection.new(host: nsqd.host, port: nsqd.tcp_port, max_in_flight: 1_000_000)
       }.to raise_error
     end
-  end
+=end
 
 
+=begin
   describe '#close' do
     it 'can be called multiple times, without issue' do
       expect {
@@ -85,4 +84,5 @@ describe Nsq::Connection do
       end
     end
   end
+=end
 end

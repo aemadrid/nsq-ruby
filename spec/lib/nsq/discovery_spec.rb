@@ -1,3 +1,4 @@
+=begin
 # -*- encoding: utf-8 -*-
 require_relative '../../spec_helper'
 
@@ -96,3 +97,4 @@ describe Nsq::Discovery do
     end
   end
 end
+=end

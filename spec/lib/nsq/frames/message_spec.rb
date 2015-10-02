@@ -1,3 +1,4 @@
+=begin
 require_relative '../../../spec_helper'
 
 describe Nsq::Message do
@@ -23,3 +24,4 @@ describe Nsq::Message do
     end
   end
 end
+=end

@@ -17,20 +17,23 @@ require 'timeout'
 require 'rspec'
 require 'rspec/core/shared_context'
 require 'nsq'
-require 'nsq-cluster'
 
 # Show lots more information about the cluster
 # ENV['VERBOSE']       = 'true'
-
-# NsqCluster : Set uncommon port numbers to avoid clashing with local instances
-Nsqd.base_port       = 24150
-Nsqlookupd.base_port = 24160
-Nsqadmin.base_port   = 24171
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 RSpec.configure do |config|
   config.before(:suite) do
     Nsq.logger = Logger.new(STDOUT) if ENV['VERBOSE']
+  end
+
+  config.before(:each, cluster: true) do
+    @cluster = Nsq::Cluster.new @cluster_options || {}
+    @cluster.run!
+  end
+
+  config.after(:each, cluster: true) do
+    @cluster.halt!
   end
 end

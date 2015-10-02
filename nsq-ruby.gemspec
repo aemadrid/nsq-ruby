@@ -18,5 +18,19 @@ Gem::Specification.new do |s|
   s.licenses = ['MIT']
   s.rubygems_version = '2.4.5'
   s.summary = 'Ruby client library for NSQ'
+
+  s.add_dependency 'concurrent-ruby', '1.0.0.pre3'
+  s.add_dependency 'concurrent-ruby-edge', '0.2.0.pre3'
+
+  s.add_runtime_dependency 'http'
+  s.add_runtime_dependency 'multi_json'
+  s.add_runtime_dependency 'digest-crc'
+
+  s.add_runtime_dependency 'pry'
+
+  s.add_development_dependency 'rake'
+  s.add_development_dependency 'childprocess'
+  s.add_development_dependency 'rspec', '~> 3.0'
+
 end
 

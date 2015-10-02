@@ -1,3 +1,4 @@
+=begin
 # -*- encoding: utf-8 -*-
 require_relative '../../spec_helper'
 require 'json'
@@ -230,3 +231,4 @@ describe Nsq::Consumer do
   end
 
 end
+=end

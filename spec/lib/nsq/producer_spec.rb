@@ -1,3 +1,4 @@
+=begin
 # -*- encoding: utf-8 -*-
 require_relative '../../spec_helper'
 require 'json'
@@ -168,3 +169,4 @@ describe Nsq::Producer do
 
 
 end
+=end
