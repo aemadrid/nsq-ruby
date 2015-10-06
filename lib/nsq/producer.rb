@@ -15,13 +15,12 @@ module Nsq
       nsqlookupds = []
       if opts[:nsqlookupd]
         nsqlookupds = [opts[:nsqlookupd]].flatten
-        discover_repeatedly(
-          nsqlookupds: nsqlookupds,
-          interval:    @discovery_interval
-        )
+        puts "Producer : initialize : nsqlookupds : (#{nsqlookupds.class.name}) #{nsqlookupds.inspect}"
+        discover_repeatedly nsqlookupds: nsqlookupds, interval: @discovery_interval
 
       elsif opts[:nsqd]
         nsqds = [opts[:nsqd]].flatten
+        puts "Producer : initialize : nsqds : (#{nsqds.class.name}) #{nsqds.inspect}"
         nsqds.each { |d| add_connection(d) }
 
       else

@@ -23,17 +23,22 @@ require 'nsq'
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
-RSpec.configure do |config|
-  config.before(:suite) do
+RSpec.configure do |c|
+
+  c.filter_run_excluding skip: true unless ENV['FULL'] == 'true'
+
+  c.before(:suite) do
     Nsq.logger = Logger.new(STDOUT) if ENV['VERBOSE']
   end
 
-  config.before(:each, cluster: true) do
-    @cluster = Nsq::Cluster.new @cluster_options || {}
-    @cluster.run!
+  c.before(:each) do
+    cluster.run!
   end
 
-  config.after(:each, cluster: true) do
-    @cluster.halt!
+  c.after(:each) do
+    @connection.close if @connection
+    @consumer.terminate if @consumer
+    @producer.terminate if @producer
+    @cluster.halt! if @cluster
   end
 end

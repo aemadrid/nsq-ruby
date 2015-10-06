@@ -22,8 +22,9 @@ module Nsq
     RESPONSE_OK        = 'OK'
 
     def initialize(opts = {})
+      # puts "opts (#{opts.class.name}) #{opts.to_yaml}"
       @host          = opts[:host] || (raise ArgumentError, 'host is required')
-      @port          = opts[:port] || (raise ArgumentError, 'host is required')
+      @port          = opts[:port] || (raise ArgumentError, 'port is required')
       @queue         = opts[:queue]
       @topic         = opts[:topic]
       @channel       = opts[:channel]
@@ -273,13 +274,12 @@ module Nsq
     # over and over until we succeed!
     def reconnect
       close_connection
-      with_retries do
-        open_connection
-      end
+      with_retries { open_connection }
     end
 
     def open_connection
       @socket = TCPSocket.new(@host, @port)
+
       # write the version and IDENTIFY directly to the socket to make sure
       # it gets to nsqd ahead of anything in the `@write_queue`
       write_to_socket '  V2'
@@ -317,7 +317,7 @@ module Nsq
     #
     # Borrowed liberally from:
     # https://github.com/ooyala/retries/blob/master/lib/retries.rb
-    def with_retries(&block)
+    def with_retries(max = 100, &block)
       base_sleep_seconds = 0.5
       max_sleep_seconds  = 300 # 5 minutes
 
@@ -326,11 +326,19 @@ module Nsq
       start_time         = Time.now
 
       begin
+        raise RuntimeError, "max attempts (#{attempts})" if attempts > max
+
         attempts += 1
+
         return block.call(attempts)
 
-      rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
-        Errno::ENETDOWN, Errno::ENETUNREACH, Errno::ETIMEDOUT, Timeout::Error => ex
+      rescue Errno::ECONNREFUSED,
+        Errno::ECONNRESET,
+        Errno::EHOSTUNREACH,
+        Errno::ENETDOWN,
+        Errno::ENETUNREACH,
+        Errno::ETIMEDOUT,
+        Timeout::Error => ex
 
         raise ex if attempts >= 100
 
@@ -343,6 +351,7 @@ module Nsq
         sleep_seconds = [base_sleep_seconds, sleep_seconds].max
 
         warn "Failed to connect: #{ex}. Retrying in #{sleep_seconds.round(1)} seconds."
+        puts "[#{attempts}] Failed to connect: #{ex}. Retrying in #{sleep_seconds.round(1)} seconds."
 
         snooze(sleep_seconds)
 

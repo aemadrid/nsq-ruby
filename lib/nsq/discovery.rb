@@ -41,17 +41,14 @@ module Nsq
     #
     def nsqds_for_topic(topic)
       gather_nsqds_from_all_lookupds do |lookupd|
-        get_nsqds(lookupd, topic)
+        get_nsqds lookupd, topic
       end
     end
-
 
     private
 
     def gather_nsqds_from_all_lookupds
-      nsqd_list = @lookupds.map do |lookupd|
-        yield(lookupd)
-      end.flatten
+      nsqd_list = @lookupds.map { |lookupd| yield(lookupd) }.flatten
 
       # All nsqlookupds were unreachable, raise an error!
       if nsqd_list.length > 0 && nsqd_list.all? { |nsqd| nsqd.nil? }
@@ -65,11 +62,11 @@ module Nsq
     # If there's an error, return nil
     def get_nsqds(lookupd, topic = nil)
       uri_scheme = 'http://' unless lookupd.match(%r(https?://))
-      uri = URI.parse("#{uri_scheme}#{lookupd}")
+      uri        = URI.parse("#{uri_scheme}#{lookupd}")
 
       uri.query = "ts=#{Time.now.to_i}"
       if topic
-        uri.path = '/lookup'
+        uri.path  = '/lookup'
         uri.query += "&topic=#{topic}"
       else
         uri.path = '/nodes'

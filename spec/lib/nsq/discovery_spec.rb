@@ -8,7 +8,7 @@ describe Nsq::Discovery do
 
   let(:topic) { 'some-topic' }
   let!(:cluster) do
-    NsqCluster.new(nsqd_count: nsqd_count, nsqlookupd_count: 2).tap do |c|
+    NsqCluster.new(nsqds: nsqd_count, lookupds: 2).tap do |c|
       c.nsqd.take(nsqd_count - 1).each { |nsqd| nsqd.pub(topic, 'some-message') }
       c.nsqd.last.pub('some-other-topic', 'some-message')
     end

@@ -14,12 +14,10 @@ module Nsq
       @connections.values.any?(&:connected?)
     end
 
-
     def terminate
       @discovery_thread.kill if @discovery_thread
       drop_all_connections
     end
-
 
     private
 
@@ -31,18 +29,23 @@ module Nsq
     #     interval: 60
     #
     def discover_repeatedly(opts = {})
+      # puts "ClientBase : discover_repeatedly : opts : (#{opts.class.name}) #{opts.inspect}"
       @discovery_thread = Thread.new do
-
+        # puts 'ClientBase : discover_repeatedly : started thread ...'
         @discovery = Discovery.new(opts[:nsqlookupds])
-
+        # puts "ClientBase : discover_repeatedly : @discovery : (#{@discovery.class.name}) #{@discovery.inspect}"
         loop do
+          # puts 'ClientBase : discover_repeatedly : starting loop ...'
           begin
-            nsqds = nsqds_from_lookupd(opts[:topic])
-            drop_and_add_connections(nsqds)
+            # puts 'ClientBase : discover_repeatedly : getting nsqds ...'
+            nsqds = nsqds_from_lookupd opts[:topic]
+            # puts "ClientBase : discover_repeatedly : nsqds : (#{nsqds.class.name}) #{nsqds.inspect}"
+            drop_and_add_connections nsqds
           rescue DiscoveryException
             # We can't connect to any nsqlookupds. That's okay, we'll just
             # leave our current nsqd connections alone and try again later.
             warn 'Could not connect to any nsqlookupd instances in discovery loop'
+            # puts 'Could not connect to any nsqlookupd instances in discovery loop'
           end
           sleep opts[:interval]
         end
@@ -52,15 +55,13 @@ module Nsq
       @discovery_thread.abort_on_exception = true
     end
 
-
     def nsqds_from_lookupd(topic = nil)
       if topic
-        @discovery.nsqds_for_topic(topic)
+        @discovery.nsqds_for_topic topic
       else
         @discovery.nsqds
       end
     end
-
 
     def drop_and_add_connections(nsqds)
       # drop nsqd connections that are no longer in lookupd
@@ -83,32 +84,30 @@ module Nsq
       connections_changed
     end
 
-
     def add_connection(nsqd, options = {})
       info "+ Adding connection #{nsqd}"
-      host, port = nsqd.split(':')
-      connection = Connection.new({
-        host: host,
-        port: port
-      }.merge(options))
+      puts "+ Adding connection #{nsqd}"
+      host, port         = nsqd.split(':')
+      connection         = Connection.new({
+                                            host: host,
+                                            port: port
+                                          }.merge(options))
       @connections[nsqd] = connection
     end
 
-
     def drop_connection(nsqd)
       info "- Dropping connection #{nsqd}"
+      puts "- Dropping connection #{nsqd}"
       connection = @connections.delete(nsqd)
       connection.close if connection
       connections_changed
     end
-
 
     def drop_all_connections
       @connections.keys.each do |nsqd|
         drop_connection(nsqd)
       end
     end
-
 
     # optional subclass hook
     def connections_changed

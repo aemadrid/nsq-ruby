@@ -1,34 +1,29 @@
 # -*- encoding: utf-8 -*-
 
-describe Nsq::Connection, cluster: true do
+describe Nsq::Connection do
 
   describe '#new' do
     it 'should raise an exception if it cannot connect to nsqd' do
-      @cluster.halt!
+      cluster.halt!
       expect {
-        Nsq::Connection.new host: @cluster.host, port: @cluster.nsqd_tcp_port
+        Nsq::Connection.new host: host, port: tcp_port
       }.to raise_error Errno::ECONNREFUSED
     end
   end
 
-=begin
-    it 'should raise an exception if it connects to something that isn\'t nsqd' do
-      expect {
-        # try to connect to the HTTP port instead of TCP
-        Nsq::Connection.new(host: nsqd.host, port: nsqd.http_port)
-      }.to raise_error
-    end
+  it 'should raise an exception if it connects to something that isn\'t nsqd' do
+    expect {
+      Nsq::Connection.new(host: host, port: http_port)
+    }.to raise_error RuntimeError, /Bad frame type specified/
+  end
 
     it 'should raise an exception if max_in_flight is above what the server supports' do
       expect {
-        # try to connect to the HTTP port instead of TCP
-        Nsq::Connection.new(host: nsqd.host, port: nsqd.tcp_port, max_in_flight: 1_000_000)
-      }.to raise_error
+        Nsq::Connection.new(host: host, port: tcp_port, max_in_flight: 1_000_000)
+      }.to raise_error RuntimeError, /max_in_flight is set to 1000000, server only supports/
     end
-=end
 
 
-=begin
   describe '#close' do
     it 'can be called multiple times, without issue' do
       expect {
@@ -39,22 +34,20 @@ describe Nsq::Connection, cluster: true do
 
 
   # This is really testing the ability for Connection to reconnect
-  describe '#connected?' do
+  describe '#connected?', skip: true do
     before(:each) { set_speedy_connection_timeouts! }
-
+    let(:conn){ Nsq::Connection.new host: host, port: tcp_port }
     it 'should return true when nsqd is up and false when nsqd is down' do
-      wait_for { connection.connected? }
-      expect(connection.connected?).to eq(true)
+      wait_for { conn.connected? }
+      expect(conn.connected?).to eq true
       nsqd.stop
-      wait_for { !connection.connected? }
-      expect(connection.connected?).to eq(false)
+      wait_for { !conn.connected? }
+      expect(conn.connected?).to eq false
       nsqd.start
-      wait_for { connection.connected? }
-      expect(connection.connected?).to eq(true)
+      wait_for { conn.connected? }
+      expect(conn.connected?).to eq true
     end
-
   end
-
 
   describe 'private methods' do
     describe '#frame_class_for_type' do
@@ -84,5 +77,4 @@ describe Nsq::Connection, cluster: true do
       end
     end
   end
-=end
 end

@@ -5,132 +5,306 @@ ChildProcess.posix_spawn = true
 require 'tmpdir'
 require 'fileutils'
 require 'yaml'
+require 'forwardable'
 
 module Nsq
   class Cluster
+
+    include Nsq::AttributeLogger
+
+    class DaemonManager
+
+      extend Forwardable
+      include Comparable
+
+      attr_reader :host, :tcp_port, :http_port, :tmp_dir, :process, :options, :commands
+
+      alias :port :tcp_port
+
+      def process
+        @process ||= make_process
+      end
+
+      def running?
+        !@process.nil? && @process.alive?
+      end
+
+      def start
+        return false if running?
+        process.start
+        wait
+      end
+
+      def wait
+        check :http
+      end
+
+      def stop
+        return false unless running?
+        process.stop
+        process.wait
+        @process = nil
+      end
+
+      def address(type = :tcp)
+        "#{host}:#{send("#{type}_port")}"
+      end
+
+      def check(type)
+        TCPSocket.new host, send("#{type}_port")
+      rescue Errno::ECONNREFUSED
+        retry
+      end
+
+      def to_s
+        "#<#{self.class.name} " +
+          "host=#{host.inspect} " +
+          "tcp_port=#{tcp_port} " +
+          "http_port=#{http_port} " +
+          "running=#{running?} " +
+          "pid=#{process ? process.pid : ''}>"
+      end
+
+      alias :inspect :to_s
+
+      def <=>(other)
+        to_s <=> other.to_s
+      end
+
+      private
+
+      def make_process
+        ChildProcess.build(*commands).tap do |process|
+          process.io.inherit! if ENV['DEBUG']
+          process.cwd = tmp_dir
+        end
+      end
+
+    end
+
+    class NsqAdminManager < DaemonManager
+
+      attr_reader :lookupds
+
+      def initialize(host, http_port, lookupds, options = {})
+        @host      = host
+        @tcp_port  = tcp_port
+        @http_port = http_port
+        @tmp_dir   = tmp_dir
+        @lookupds  = lookupds
+        @options   = build_options options
+        @commands  = build_commands
+        @process   = make_process
+      end
+
+      private
+
+      def build_options(extra_options)
+        {
+          'http-address' => address(:http),
+        }.merge extra_options
+      end
+
+      def build_commands
+        ['nsqadmin'] + options.map { |k, v| ["-#{k}", v] }.tap do |cmds|
+          lookupds.each { |addr| cmds << '-lookupd-http-address' << addr }
+        end.flatten
+      end
+    end
+
+    class NsqLookupdManager < DaemonManager
+
+      def initialize(host, tcp_port, http_port, tmp_dir, options = {})
+        @host      = host
+        @tcp_port  = tcp_port
+        @http_port = http_port
+        @tmp_dir   = tmp_dir
+        @options   = build_options options
+        @commands  = build_commands
+        @process   = make_process
+      end
+
+      private
+
+      def build_options(extra_options)
+        {
+          'tcp-address'  => address(:tcp),
+          'http-address' => address(:http),
+        }.merge extra_options
+      end
+
+      def build_commands
+        (['nsqlookupd'] + options.map { |k, v| ["-#{k}", v] }).flatten
+      end
+    end
+
+    class NsqdManager < DaemonManager
+
+      extend Forwardable
+
+      attr_reader :tmp_dir, :lookupds
+
+      def initialize(host, tcp_port, http_port, tmp_dir, lookupds, options = {})
+        @host      = host
+        @tcp_port  = tcp_port
+        @http_port = http_port
+        @tmp_dir   = tmp_dir
+        @lookupds  = lookupds
+        @options   = build_options options
+        @commands  = build_commands
+        @process   = make_process
+      end
+
+      def wait
+        check :tcp
+      end
+
+      def conn
+        Nsq::Connection.new(host: host, port: tcp_port).tap do |konn|
+          if block_given?
+            res = yield konn
+            konn.close
+            res
+          else
+            konn
+          end
+        end
+      end
+
+      private
+
+      def build_options(extra_options)
+        {
+          'data-path'    => tmp_dir,
+          'tcp-address'  => address(:tcp),
+          'http-address' => address(:http),
+        }.merge extra_options
+      end
+
+      def build_commands
+        ['nsqd'] + options.map { |k, v| ["-#{k}", v] }.tap do |cmds|
+          lookupds.each { |addr| cmds << '-lookupd-tcp-address' << addr }
+        end.flatten
+      end
+    end
 
     class << self
 
       attr_reader :port
 
       def ports(n=1)
-        @port  ||= 6677
+        @port  ||= 9_000 + rand(3_000)
         result = n.times.inject([]) { |m, _| m.push(@port += 1) }
         n == 1 ? result.first : result
       end
 
     end
 
-    attr_reader :args, :host, :nsqds, :lookupds
+    attr_reader :args, :host, :nsqds, :lookupds, :admins
 
     def initialize(options = {})
-      puts "initialize | options (#{options.class.name}) #{options.to_yaml}"
       @args    = {
         lookupds:        1,
         lookupd_options: {},
         nsqds:           1,
         nsqd_options:    {},
+        admins:          0,
+        admin_options:   {},
         host:            '0.0.0.0'
       }.update options
       @host    = @args[:host]
       @tmp_dir = Dir.mktmpdir "nsq-ruby-#{self.class.port}"
-      puts "initialize | args (#{args.class.name}) #{args.to_yaml}"
-      puts "initialize | host (#{host.class.name}) #{host.inspect}"
-      puts "initialize | tmp_dir (#{tmp_dir.class.name}) #{tmp_dir.inspect}"
+      build_lookupds
+      build_nsqds
+      build_admins
+      at_exit { halt! }
+    end
+
+    def all
+      [lookupds, nsqds, admins].flatten.sort
+    end
+
+    def running?
+      return false if all.empty?
+      all.all? { |x| x.running? }
     end
 
     def run!
-      @lookupds = args[:lookupds].times.map { build_lookupd }
-      @nsqds    = args[:nsqds].times.map { build_nsqd }
-      nsqd_tcp_addresses.each { |address| check_address address }
+      FileUtils.mkdir_p tmp_dir unless File.directory?(tmp_dir)
+      nsqds.map { |x| x.start }
+      lookupds.map { |x| x.start }
+      admins.map { |x| x.start }
+      nsqds.each { |x| x.check :tcp }
+      all
     end
 
     def halt!
-      @nsqds.map { |x| x.first }.map { |x| x.stop }
-      @lookupds.map { |x| x.first }.map { |x| x.stop }
-      @nsqds.map { |x| x.first }.map { |x| x.wait }
-      @lookupds.map { |x| x.first }.map { |x| x.wait }
-      FileUtils.rm_rf tmp_dir
+      nsqds.map { |x| x.stop }
+      lookupds.map { |x| x.stop }
+      admins.map { |x| x.stop }
+      FileUtils.rm_rf tmp_dir if File.directory?(tmp_dir)
+      all
     end
 
-    def nsqd_tcp_port(meth = :first)
-      nsqd_tcp_addresses.send(meth).split(':').last
+    def nsqd
+      nsqds.first
     end
 
-    def nsqd_http_port(meth = :first)
-      nsqd_http_addresses.send(meth).split(':').last
+    def lookupd
+      lookupds.first
     end
 
-    def lookupd_http_port(meth = :first)
-      lookupd_http_addresses.send(meth).split(':').last
+    def nsqd_for_idx(idx)
+      nsqds[idx % nsqds.length]
     end
 
-    def lookupd_tcp_port(meth = :first)
-      lookupd_tcp_addresses.send(meth).split(':').last
+    def to_s
+      %{#<#{self.class.name} host=#{host} } +
+        %{admins=#{admins_running_count}/#{args[:admins]} } +
+        %{lookupds=#{lookupds_running_count}/#{args[:lookupds]} } +
+        %{nsqds=#{nsqds_running_count}/#{args[:nsqds]}>}
     end
+
+    alias :inspect :to_s
 
     private
 
     attr_reader :tmp_dir
 
-    def build_address(port)
-      "#{host}:#{port}"
-    end
-
-    def nsqd_tcp_addresses
-      @nsqds.map { |x| x.last }.map { |options| options['tcp-address'] }
-    end
-
-    def nsqd_http_addresses
-      @nsqds.map { |x| x.last }.map { |options| "http://#{options['http-address']}" }
-    end
-
-    def lookupd_http_addresses
-      @lookupds.map { |x| x.last }.map { |options| "http://#{options['http-address']}" }
-    end
-
-    def lookupd_tcp_addresses
-      @lookupds.map { |x| x.last }.map { |options| options['tcp-address'] }
-    end
-
-    def build_nsqd
-      ports   = self.class.ports(2)
-      options = {
-        'data-path'    => tmp_dir,
-        'tcp-address'  => build_address(ports.first),
-        'http-address' => build_address(ports.last),
-      }.merge args[:nsqd_options]
-      puts "build_nsqd : options (#{options.class.name}) #{options.to_yaml}"
-      cmd = ['nsqd'] + options.map { |k, v| ["-#{k}", v] }
-      lookupd_tcp_addresses.each { |addr| cmd << '-lookupd-tcp-address' << addr }
-      [make_process(cmd), options]
-    end
-
-    def build_lookupd
-      ports   = self.class.ports(2)
-      options = {
-        'tcp-address'  => build_address(ports.first),
-        'http-address' => build_address(ports.last),
-      }.merge args[:lookupd_options]
-      cmd     = ['nsqlookupd'] + options.map { |k, v| ["-#{k}", v] }
-      res     = [make_process(cmd), options]
-      puts "res (#{res.class.name}) #{res.to_yaml}"
-      res
-    end
-
-    def make_process(*cmds)
-      ChildProcess.build(*cmds.flatten).tap do |process|
-        process.io.inherit! if ENV['DEBUG']
-        process.cwd = tmp_dir
-        process.start
+    def build_lookupds
+      @lookupds = args[:lookupds].times.map do
+        ports = self.class.ports(2)
+        NsqLookupdManager.new host, ports.first, ports.last, tmp_dir, args[:lookupd_options]
       end
     end
 
-    def check_address(address)
-      host, port = address.split(':')
-      TCPSocket.new host, port
-    rescue Errno::ECONNREFUSED
-      retry
+    def build_nsqds
+      @nsqds = args[:nsqds].times.map do
+        ports = self.class.ports(2)
+        NsqdManager.new host, ports.first, ports.last, tmp_dir, lookupds.map { |x| x.address :tcp }, args[:nsqd_options]
+      end
+    end
+
+    def build_admins
+      @admins = args[:admins].times.map do
+        port = self.class.ports(1)
+        NsqAdminManager.new host, port, lookupds.map { |x| x.address :http }, args[:admin_options]
+      end
+    end
+
+    def admins_running_count
+      return 0 if admins.nil?
+      admins.count { |x| x.running? }
+    end
+
+    def lookupds_running_count
+      return 0 if lookupds.nil?
+      lookupds.count { |x| x.running? }
+    end
+
+    def nsqds_running_count
+      return 0 if nsqds.nil?
+      nsqds.count { |x| x.running? }
     end
 
   end
