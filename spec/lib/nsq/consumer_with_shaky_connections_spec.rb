@@ -19,7 +19,7 @@ describe Nsq::Consumer do
   # But, when nsqd goes down, nsqlookupd will see that its gone and unregister
   # it. So when the next time the discovery loop runs, that nsqd will no longer
   # be listed.
-  it 'should drop a connection when an nsqd goes down and add one when it comes back', focus: true do
+  it 'should drop a connection when an nsqd goes down and add one when it comes back' do
     cluster.nsqds.last.stop
     wait_for { consumer.connections.length == nsqd_count - 1 }
     cluster.nsqds.last.start
@@ -70,7 +70,7 @@ describe Nsq::Consumer do
       msg.finish
     end
   end
-  it 'should be able to handle all queues going offline and coming back' do
+  it 'should be able to handle all queues going offline and coming back', focus: true do
     consumer
     expected_messages = cluster.nsqds.map { |nsqd| nsqd.tcp_port.to_s }
 
@@ -81,7 +81,7 @@ describe Nsq::Consumer do
       nsqd.conn { |x| x.pub topic, expected_messages[idx] }
     end
 
-    assert_no_timeout(10) do
+    assert_no_timeout(20) do
       received_messages = []
 
       while (expected_messages & received_messages).length < expected_messages.length do

@@ -12,17 +12,17 @@ module Nsq
 
       @discovery_interval = opts[:discovery_interval] || 60
 
-      nsqlookupds = []
       if opts[:nsqlookupd]
         nsqlookupds = [opts[:nsqlookupd]].flatten
         discover_repeatedly nsqlookupds: nsqlookupds, interval: @discovery_interval
 
       elsif opts[:nsqd]
         nsqds = [opts[:nsqd]].flatten
-        nsqds.each { |d| add_connection(d) }
+        nsqds.each { |d| add_connection d }
 
       else
-        add_connection('127.0.0.1:4150')
+        add_connection '127.0.0.1:4150'
+
       end
 
       at_exit { terminate }

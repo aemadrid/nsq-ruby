@@ -46,7 +46,7 @@ describe Nsq::Producer do
         messages_received = []
 
         begin
-          wait_for { http_producer.ping.success? }
+          wait_for(10, 'nsq is listening') { http_producer.ping.success? }
           consumer = new_nsqd_consumer
           assert_no_timeout(5) do
             # TODO: make the socket fail faster
@@ -84,12 +84,14 @@ describe Nsq::Producer do
       end
     end
   end
-  context 'connecting via nsqlookupd', focus: true do
-    let(:cluster_options) { { nsqds: 2, lookupds: 1 } }
+  context 'connecting via nsqlookupd' do
+    let(:nsqd_count) { 2 }
+    let(:cluster_options) { { nsqds: nsqd_count, lookupds: 1 } }
     let(:producer) { new_lookupd_producer }
+    let(:timeout) { 25 }
     before(:each) do
-      wait_for(3) do
-        cluster.running? && producer.connections.length == cluster.nsqds.length
+      wait_for(timeout, 'get the same producer/nsqds connections') do
+        producer.connections.length == cluster.nsqds.length
       end
     end
     describe '#connections' do
@@ -98,11 +100,13 @@ describe Nsq::Producer do
       end
       it 'should drop a connection when an nsqd goes offline' do
         cluster.nsqds.first.stop
-        wait_for { producer.connections.length == cluster.nsqds.length - 1 }
-        expect(producer.connections.length).to eq(cluster.nsqds.length - 1)
+        wait_for(30, 'get the actual producer/nsqds connections') do
+          producer.connections.length == cluster.nsqds.length - 1
+        end
+        expect(producer.connections.length).to eq(nsqd_count - 1)
       end
     end
-    describe '#connected?' do
+    describe '#connected?', focus: true do
       it 'should return true if it\'s connected to at least one nsqd' do
         expect(producer.connected?).to eq true
       end
@@ -112,10 +116,10 @@ describe Nsq::Producer do
         expect(producer.connected?).to eq(false)
       end
     end
-    describe '#write' do
+    describe '#write', focus: true do
       it 'writes to a random connection' do
         expect_any_instance_of(Nsq::Connection).to receive(:pub)
-        producer.write('howdy!')
+        producer.write 'howdy!'
       end
       it 'raises an error if there are no connections to write to' do
         cluster.nsqds.each { |nsqd| nsqd.stop }

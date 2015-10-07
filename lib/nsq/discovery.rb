@@ -40,9 +40,7 @@ module Nsq
     # If all nsqlookupd's are unreachable, raises Nsq::DiscoveryException
     #
     def nsqds_for_topic(topic)
-      gather_nsqds_from_all_lookupds do |lookupd|
-        get_nsqds lookupd, topic
-      end
+      gather_nsqds_from_all_lookupds { |lookupd| get_nsqds lookupd, topic }
     end
 
     private
@@ -62,7 +60,7 @@ module Nsq
     # If there's an error, return nil
     def get_nsqds(lookupd, topic = nil)
       uri_scheme = 'http://' unless lookupd.match(%r(https?://))
-      uri        = URI.parse("#{uri_scheme}#{lookupd}")
+      uri        = URI.parse "#{uri_scheme}#{lookupd}"
 
       uri.query = "ts=#{Time.now.to_i}"
       if topic
@@ -73,9 +71,8 @@ module Nsq
       end
 
       begin
-        body = Net::HTTP.get(uri)
-        data = JSON.parse(body)
-
+        body = Net::HTTP.get uri
+        data = JSON.parse body
         if data['data'] && data['data']['producers']
           data['data']['producers'].map do |producer|
             "#{producer['broadcast_address']}:#{producer['tcp_port']}"

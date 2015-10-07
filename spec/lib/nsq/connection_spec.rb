@@ -34,7 +34,7 @@ describe Nsq::Connection do
 
 
   # This is really testing the ability for Connection to reconnect
-  describe '#connected?', skip: true do
+  describe '#connected?', focus: true do
     before(:each) { set_speedy_connection_timeouts! }
     let(:conn){ Nsq::Connection.new host: host, port: tcp_port }
     it 'should return true when nsqd is up and false when nsqd is down' do

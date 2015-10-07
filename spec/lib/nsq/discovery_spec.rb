@@ -13,10 +13,10 @@ describe Nsq::Discovery do
     end
   end
 
-  describe 'a single nsqlookupd' do
+  describe 'a single nsqlookupd', focus: true do
     let(:discovery) { new_discovery cluster.lookupds.first }
     describe '#nsqds' do
-      it 'returns all nsqds', focus: true do
+      it 'returns all nsqds' do
         nsqds = discovery.nsqds.sort
         expect(nsqds).to eq(expected_all_nsqds)
       end

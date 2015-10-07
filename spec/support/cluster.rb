@@ -76,7 +76,7 @@ module Nsq
 
       def make_process
         ChildProcess.build(*commands).tap do |process|
-          process.io.inherit! if ENV['DEBUG']
+          process.io.inherit! if ENV['VERBOSE'] == 'true'
           process.cwd = tmp_dir
         end
       end

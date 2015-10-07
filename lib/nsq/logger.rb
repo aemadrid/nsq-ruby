@@ -29,7 +29,7 @@ module Nsq
     def prefix
       attrs = self.class.send(:class_variable_get, :@@log_attributes)
       if attrs.count > 0
-        "[#{attrs.map{|a| "#{a.to_s}: #{self.send(a)}"}.join(' ')}] "
+        "[#{self.class.name.split('::').last}|#{attrs.map{|a| "#{a.to_s}:#{self.send(a)}"}.join('|')}] "
       else
         ''
       end

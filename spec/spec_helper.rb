@@ -30,7 +30,12 @@ RSpec.configure do |c|
   c.filter_run_excluding performance: true unless ENV['PERFORMANCE'] == 'true'
 
   c.before(:suite) do
-    Nsq.logger = Logger.new(STDOUT) if ENV['DEBUG'] = 'true'
+    if ENV['VERBOSE'] == 'true'
+      Nsq.logger = Logger.new(STDOUT).tap { |x| x.level = Logger::DEBUG }
+      Nsq.logger.debug "debugging..."
+      Nsq.logger.info "infoing..."
+      Nsq.logger.error "erroring..."
+    end
   end
 
   c.before(:each) do

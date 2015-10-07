@@ -98,13 +98,22 @@ module SharedHelperContext
   # example:
   #   wait_for { @consumer.queue.length > 0 }
   #
-  def wait_for(timeout = 5, &block)
-    Timeout::timeout(timeout) do
-      loop do
-        break if yield
-        sleep(0.1)
-      end
+  def wait_for(timeout = 5, msg = 'process', interval = 0.25, &block)
+    res        = nil
+    start_time = Time.now
+    deadline   = start_time + timeout
+
+    while Time.now < deadline
+      res = yield
+      break if res
+      sleep interval
     end
+    end_time = Time.now
+    took     = end_time - start_time
+
+    Nsq.logger.debug 'Took %is (%is max)%s...' % [took, timeout.to_f, (msg ? " to #{msg}" : '')]
+    expect(took).to be <= timeout, "expected for #{msg} to take less than #{timeout}s but took #{took}s"
+    [took, res]
   end
 
   def bnr(msg, chr = '-')

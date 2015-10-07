@@ -30,7 +30,7 @@ module Nsq
     #
     def discover_repeatedly(opts = {})
       @discovery_thread = Thread.new do
-        @discovery = Discovery.new(opts[:nsqlookupds])
+        @discovery = Discovery.new opts[:nsqlookupds]
         loop do
           begin
             nsqds = nsqds_from_lookupd opts[:topic]
@@ -49,25 +49,22 @@ module Nsq
     end
 
     def nsqds_from_lookupd(topic = nil)
-      if topic
-        @discovery.nsqds_for_topic topic
-      else
-        @discovery.nsqds
-      end
+      found = []
+      found += @discovery.nsqds_for_topic(topic) if topic
+      found += @discovery.nsqds if found.empty?
+      found
     end
 
     def drop_and_add_connections(nsqds)
       # drop nsqd connections that are no longer in lookupd
       missing_nsqds = @connections.keys - nsqds
-      missing_nsqds.each do |nsqd|
-        drop_connection(nsqd)
-      end
+      missing_nsqds.each { |nsqd| drop_connection nsqd }
 
       # add new ones
       new_nsqds = nsqds - @connections.keys
       new_nsqds.each do |nsqd|
         begin
-          add_connection(nsqd)
+          add_connection nsqd
         rescue Exception => ex
           error "Failed to connect to nsqd @ #{nsqd}: #{ex}"
         end
