@@ -25,7 +25,9 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 RSpec.configure do |c|
 
+  c.filter_run focus: true if ENV['FOCUS'] == 'true'
   c.filter_run_excluding skip: true unless ENV['FULL'] == 'true'
+  c.filter_run_excluding performance: true unless ENV['PERFORMANCE'] == 'true'
 
   c.before(:suite) do
     Nsq.logger = Logger.new(STDOUT) if ENV['VERBOSE']
@@ -41,4 +43,5 @@ RSpec.configure do |c|
     @producer.terminate if @producer
     @cluster.halt! if @cluster
   end
+
 end

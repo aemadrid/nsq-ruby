@@ -70,8 +70,14 @@ module SharedHelperContext
     Nsq::Producer.new options
   end
 
+  def new_discovery(*cluster_lookupds)
+    lookupds = cluster_lookupds.flatten.map { |l| l.address :http }
+    lookupds.last.prepend 'http://' # one lookupd has scheme and one does not
+    Nsq::Discovery.new lookupds
+  end
+
   def message_count
-    stats   = http_producer.stats
+    stats  = http_producer.stats
     topics = stats.data.topics
     topic  = topics.select { |t| t['topic_name'] == producer.topic }.first
     topic ? topic['message_count'] : 0
@@ -99,12 +105,12 @@ module SharedHelperContext
     }.to raise_error(Timeout::Error)
   end
 
-# Block execution until a condition is met
-# Times out after 5 seconds by default
-#
-# example:
-#   wait_for { @consumer.queue.length > 0 }
-#
+  # Block execution until a condition is met
+  # Times out after 5 seconds by default
+  #
+  # example:
+  #   wait_for { @consumer.queue.length > 0 }
+  #
   def wait_for(timeout = 5, &block)
     Timeout::timeout(timeout) do
       loop do

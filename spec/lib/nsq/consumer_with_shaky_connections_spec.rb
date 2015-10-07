@@ -8,7 +8,7 @@ describe Nsq::Consumer do
 
   before(:each) do
     set_speedy_connection_timeouts!
-    wait_for { consumer.connections.length == nsqd_count }
+    wait_for { cluster.running? && consumer.connections.length == nsqd_count }
   end
 
   # This is really testing that the discovery loop works as expected.
@@ -43,7 +43,7 @@ describe Nsq::Consumer do
       end
     end
   end
-  it 'should process messages from a new queue when it comes online', skip: true do
+  it 'should process messages from a new queue when it comes online' do
     nsqd = cluster.nsqds.last
     nsqd.stop
 

@@ -1,4 +1,5 @@
 require 'childprocess'
+require 'socket'
 
 ChildProcess.posix_spawn = true
 
@@ -210,7 +211,7 @@ module Nsq
         nsqd_options:    {},
         admins:          0,
         admin_options:   {},
-        host:            '0.0.0.0'
+        host:            Socket.gethostname,
       }.update options
       @host    = @args[:host]
       @tmp_dir = Dir.mktmpdir "nsq-ruby-#{self.class.port}"
