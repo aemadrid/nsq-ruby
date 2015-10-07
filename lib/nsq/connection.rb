@@ -22,7 +22,6 @@ module Nsq
     RESPONSE_OK        = 'OK'
 
     def initialize(opts = {})
-      # puts "opts (#{opts.class.name}) #{opts.to_yaml}"
       @host          = opts[:host] || (raise ArgumentError, 'host is required')
       @port          = opts[:port] || (raise ArgumentError, 'port is required')
       @queue         = opts[:queue]
@@ -351,7 +350,6 @@ module Nsq
         sleep_seconds = [base_sleep_seconds, sleep_seconds].max
 
         warn "Failed to connect: #{ex}. Retrying in #{sleep_seconds.round(1)} seconds."
-        puts "[#{attempts}] Failed to connect: #{ex}. Retrying in #{sleep_seconds.round(1)} seconds."
 
         snooze(sleep_seconds)
 

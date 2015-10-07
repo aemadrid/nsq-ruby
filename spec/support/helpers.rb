@@ -4,11 +4,7 @@ module SharedHelperContext
   let(:cluster_options) { { nsqds: 2, lookupds: 1 } }
 
   def cluster
-    return @cluster if @cluster
-    puts "cluster_options (#{cluster_options.class.name}) #{cluster_options.inspect}"
-    @cluster = Nsq::Cluster.new cluster_options
-    puts "@cluster (#{@cluster.class.name}) #{@cluster.inspect}"
-    @cluster
+    @cluster ||= Nsq::Cluster.new cluster_options
   end
 
   let(:nsqd) { cluster.nsqds.first }
@@ -25,11 +21,7 @@ module SharedHelperContext
   let(:consumer_options) { { nsqlookupd: nil, nsqd: nsqd_url, max_in_flight: 10 } }
 
   def consumer
-    return @consumer if @consumer
-    puts "consumer_options (#{consumer_options.class.name}) #{consumer_options.inspect}"
-    @consumer = new_consumer consumer_options
-    puts "@consumer (#{@consumer.class.name}) #{@consumer.inspect}"
-    @consumer
+    @consumer ||= new_consumer consumer_options
   end
 
   let(:producer_options) { { nsqlookupd: nil, nsqd: nsqd_url, max_in_flight: 10 } }
@@ -41,11 +33,7 @@ module SharedHelperContext
   let(:connection_options) { { host: host, port: tcp_port } }
 
   def connection
-    return @connection if @connection
-    puts "connection_options (#{connection_options.class.name}) #{connection_options.inspect}"
-    @connection = Nsq::Connection.new connection_options
-    puts "@@connection (#{@connection.class.name}) #{@connection.inspect}"
-    @connection
+    @connection ||= Nsq::Connection.new connection_options
   end
 
   def new_consumer(opts = {})
@@ -66,7 +54,6 @@ module SharedHelperContext
   def new_lookupd_producer(opts = {})
     lookupd = cluster.lookupds.map { |l| l.address :http }
     options = { topic: topic, nsqlookupd: lookupd, discovery_interval: 1 }.merge(opts)
-    puts "options : (#{options.class.name}) #{options.to_yaml}"
     Nsq::Producer.new options
   end
 

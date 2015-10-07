@@ -19,7 +19,7 @@ describe Nsq::Consumer do
   # But, when nsqd goes down, nsqlookupd will see that its gone and unregister
   # it. So when the next time the discovery loop runs, that nsqd will no longer
   # be listed.
-  it 'should drop a connection when an nsqd goes down and add one when it comes back' do
+  it 'should drop a connection when an nsqd goes down and add one when it comes back', focus: true do
     cluster.nsqds.last.stop
     wait_for { consumer.connections.length == nsqd_count - 1 }
     cluster.nsqds.last.start
@@ -27,20 +27,13 @@ describe Nsq::Consumer do
   end
   it 'should continue processing messages from live queues when one queue is down' do
     # shut down the last nsqd
-    puts '> stopping nsqd #3 ...'
     cluster.nsqds.last.stop
 
     # make sure there are more messages on each queue than max in flight
-    puts '> pushing 50 msgs to nsqd #1 ...'
     cluster.nsqds[0].conn { |x| 50.times { x.pub topic, 'hay' } }
-    puts '> pushing 50 msgs to nsqd #2 ...'
     cluster.nsqds[1].conn { |x| 50.times { x.pub topic, 'hay' } }
-    puts '> getting 100 msgs from the same connection in less than 5s ...'
     assert_no_timeout(5) do
-      100.times do |n|
-        puts "#{n + 1} ..."
-        consumer.pop.finish
-      end
+      100.times { |n| consumer.pop.finish }
     end
   end
   it 'should process messages from a new queue when it comes online' do
@@ -81,11 +74,8 @@ describe Nsq::Consumer do
     consumer
     expected_messages = cluster.nsqds.map { |nsqd| nsqd.tcp_port.to_s }
 
-    puts "cluster : 0 #{cluster}"
     cluster.nsqds.each { |q| q.stop }
-    puts "cluster : 1 #{cluster}"
     cluster.nsqds.each { |q| q.start }
-    puts "cluster : 2 #{cluster}"
 
     cluster.nsqds.each_with_index do |nsqd, idx|
       nsqd.conn { |x| x.pub topic, expected_messages[idx] }

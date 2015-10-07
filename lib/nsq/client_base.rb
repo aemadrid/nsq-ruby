@@ -29,23 +29,16 @@ module Nsq
     #     interval: 60
     #
     def discover_repeatedly(opts = {})
-      # puts "ClientBase : discover_repeatedly : opts : (#{opts.class.name}) #{opts.inspect}"
       @discovery_thread = Thread.new do
-        # puts 'ClientBase : discover_repeatedly : started thread ...'
         @discovery = Discovery.new(opts[:nsqlookupds])
-        # puts "ClientBase : discover_repeatedly : @discovery : (#{@discovery.class.name}) #{@discovery.inspect}"
         loop do
-          # puts 'ClientBase : discover_repeatedly : starting loop ...'
           begin
-            # puts 'ClientBase : discover_repeatedly : getting nsqds ...'
             nsqds = nsqds_from_lookupd opts[:topic]
-            # puts "ClientBase : discover_repeatedly : nsqds : (#{nsqds.class.name}) #{nsqds.inspect}"
             drop_and_add_connections nsqds
           rescue DiscoveryException
             # We can't connect to any nsqlookupds. That's okay, we'll just
             # leave our current nsqd connections alone and try again later.
             warn 'Could not connect to any nsqlookupd instances in discovery loop'
-            # puts 'Could not connect to any nsqlookupd instances in discovery loop'
           end
           sleep opts[:interval]
         end
@@ -86,7 +79,6 @@ module Nsq
 
     def add_connection(nsqd, options = {})
       info "+ Adding connection #{nsqd}"
-      puts "+ Adding connection #{nsqd}"
       host, port         = nsqd.split(':')
       connection         = Connection.new({
                                             host: host,
@@ -97,7 +89,6 @@ module Nsq
 
     def drop_connection(nsqd)
       info "- Dropping connection #{nsqd}"
-      puts "- Dropping connection #{nsqd}"
       connection = @connections.delete(nsqd)
       connection.close if connection
       connections_changed

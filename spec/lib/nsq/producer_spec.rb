@@ -89,10 +89,6 @@ describe Nsq::Producer do
     let(:producer) { new_lookupd_producer }
     before(:each) do
       wait_for(3) do
-        puts '-' * 120
-        puts "cluster.running? : #{cluster.running?} | #{cluster}"
-        puts "producer.connections.length : #{producer.connections.length}"
-        puts "cluster.nsqds.length : #{cluster.nsqds.length}"
         cluster.running? && producer.connections.length == cluster.nsqds.length
       end
     end
