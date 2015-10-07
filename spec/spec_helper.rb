@@ -21,6 +21,7 @@ require 'nsq'
 # Show lots more information about the cluster
 # ENV['VERBOSE']       = 'true'
 
+require 'nsq/cluster'
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 RSpec.configure do |c|
