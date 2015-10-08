@@ -18,7 +18,7 @@ describe Nsq::Consumer do
         # publish a bunch of messages
         (consumer.max_in_flight * 2).times { connection.pub consumer.topic, 'some-message' }
 
-        wait_for { consumer.size >= consumer.max_in_flight }
+        wait_for(10, 'all connections up') { consumer.size >= consumer.max_in_flight }
         expect(consumer.size).to eq(consumer.max_in_flight)
       end
     end
@@ -82,7 +82,7 @@ describe Nsq::Consumer do
     # This is testing the behavior of the consumer, rather than the size method itself
     describe '#size' do
       it 'doesn\'t exceed max_in_flight for the consumer' do
-        wait_for { consumer.size >= consumer.max_in_flight }
+        wait_for(10, 'all connections up') { consumer.size >= consumer.max_in_flight }
         expect(consumer.size).to eq(consumer.max_in_flight)
       end
     end

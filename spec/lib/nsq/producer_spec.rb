@@ -14,19 +14,19 @@ describe Nsq::Producer do
       end
       it 'should return false when nsqd is down' do
         nsqd.stop
-        wait_for { !producer.connected? }
+        wait_for(10, 'disconnected') { !producer.connected? }
         expect(producer.connected?).to eq false
       end
     end
     describe '#write' do
       it 'can queue a message' do
         producer.write 'some-message'
-        wait_for { message_count == 1 }
+        wait_for(10, 'one message') { message_count == 1 }
         expect(message_count).to eq 1
       end
       it 'can queue multiple messages at once' do
         producer.write(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-        wait_for { message_count == 10 }
+        wait_for(10, 'all messages') { message_count == 10 }
         expect(message_count).to eq 10
       end
       it 'shouldn\'t raise an error when nsqd is down' do
@@ -110,7 +110,7 @@ describe Nsq::Producer do
       end
       it 'should return false when it\'s not connected to any nsqds' do
         cluster.nsqds.each { |nsqd| nsqd.stop }
-        wait_for { !producer.connected? }
+        wait_for(10, 'disconnected') { !producer.connected? }
         expect(producer.connected?).to eq(false)
       end
     end
@@ -121,7 +121,7 @@ describe Nsq::Producer do
       end
       it 'raises an error if there are no connections to write to' do
         cluster.nsqds.each { |nsqd| nsqd.stop }
-        wait_for { producer.connections.length == 0 }
+        wait_for(10, 'no connections') { producer.connections.length == 0 }
         expect { producer.write('die') }.to raise_error RuntimeError, 'No connections available'
       end
     end

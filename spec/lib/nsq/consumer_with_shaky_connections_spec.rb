@@ -8,7 +8,7 @@ describe Nsq::Consumer do
 
   before(:each) do
     set_speedy_connection_timeouts!
-    wait_for { cluster.running? && consumer.connections.length == nsqd_count }
+    wait_for(10, 'all connections up') { cluster.running? && consumer.connections.length == nsqd_count }
   end
 
   # This is really testing that the discovery loop works as expected.
@@ -21,9 +21,9 @@ describe Nsq::Consumer do
   # be listed.
   it 'should drop a connection when an nsqd goes down and add one when it comes back' do
     cluster.nsqds.last.stop
-    wait_for { consumer.connections.length == nsqd_count - 1 }
+    wait_for(10, 'all connections up') { consumer.connections.length == nsqd_count - 1 }
     cluster.nsqds.last.start
-    wait_for { consumer.connections.length == nsqd_count }
+    wait_for(10, 'all connections up') { consumer.connections.length == nsqd_count }
   end
   it 'should continue processing messages from live queues when one queue is down' do
     # shut down the last nsqd
