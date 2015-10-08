@@ -18,6 +18,7 @@ describe Nsq::Discovery do
     describe '#nsqds' do
       it 'returns all nsqds' do
         nsqds = discovery.nsqds.sort
+        wait_for(10, 'all nsqds discovered') { discovery.nsqds.length == cluster.nsqds.size }
         expect(nsqds).to eq(expected_all_nsqds)
       end
     end
