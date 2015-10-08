@@ -77,10 +77,8 @@ module Nsq
     def add_connection(nsqd, options = {})
       info "+ Adding connection #{nsqd}"
       host, port         = nsqd.split(':')
-      connection         = Connection.new({
-                                            host: host,
-                                            port: port
-                                          }.merge(options))
+      options            = { host: host, port: port }.update options
+      connection         = Connection.new options
       @connections[nsqd] = connection
     end
 

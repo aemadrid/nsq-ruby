@@ -9,6 +9,7 @@ require_relative 'logger'
 
 module Nsq
   class Connection
+
     include Nsq::AttributeLogger
     @@log_attributes = [:host, :port]
 
@@ -24,7 +25,7 @@ module Nsq
     def initialize(opts = {})
       @host          = opts[:host] || (raise ArgumentError, 'host is required')
       @port          = opts[:port] || (raise ArgumentError, 'port is required')
-      @queue         = opts[:queue]
+      @queue         = opts[:queue] || Nsq.queue_class.new
       @topic         = opts[:topic]
       @channel       = opts[:channel]
       @msg_timeout   = opts[:msg_timeout] || 60_000 # 60s
@@ -35,12 +36,12 @@ module Nsq
       end
 
       # for outgoing communication
-      @write_queue = Queue.new
+      @write_queue = @queue.class.new
 
       # For indicating that the connection has died.
       # We use a Queue so we don't have to poll. Used to communicate across
       # threads (from write_loop and read_loop to connect_and_monitor).
-      @death_queue = Queue.new
+      @death_queue = @queue.class.new
 
       @connected          = false
       @presumed_in_flight = 0

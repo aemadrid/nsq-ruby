@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-
 describe Nsq::Producer do
   context 'connecting directly to a single nsqd' do
     let(:cluster_options) { { nsqds: 1 } }
@@ -7,7 +5,7 @@ describe Nsq::Producer do
     describe '#new' do
       it 'should throw an exception when trying to connect to a server that\'s down' do
         nsqd.stop
-        expect { new_producer }.to raise_error
+        expect { new_producer }.to raise_error Errno::ECONNREFUSED, /Connection refused/
       end
     end
     describe '#connected?' do
@@ -106,7 +104,7 @@ describe Nsq::Producer do
         expect(producer.connections.length).to eq(nsqd_count - 1)
       end
     end
-    describe '#connected?', focus: true do
+    describe '#connected?' do
       it 'should return true if it\'s connected to at least one nsqd' do
         expect(producer.connected?).to eq true
       end
@@ -116,15 +114,15 @@ describe Nsq::Producer do
         expect(producer.connected?).to eq(false)
       end
     end
-    describe '#write', focus: true do
+    describe '#write' do
       it 'writes to a random connection' do
-        expect_any_instance_of(Nsq::Connection).to receive(:pub)
+        expect_any_instance_of(Nsq::Connection).to receive :pub
         producer.write 'howdy!'
       end
       it 'raises an error if there are no connections to write to' do
         cluster.nsqds.each { |nsqd| nsqd.stop }
         wait_for { producer.connections.length == 0 }
-        expect { producer.write('die') }.to raise_error
+        expect { producer.write('die') }.to raise_error RuntimeError, 'No connections available'
       end
     end
   end

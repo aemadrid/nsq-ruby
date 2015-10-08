@@ -5,7 +5,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'rubygems'
 require 'bundler/setup'
 require 'nsq'
-require_relative '../spec/support/cluster'
+require 'nsq/cluster'
 
 require 'logger'
 

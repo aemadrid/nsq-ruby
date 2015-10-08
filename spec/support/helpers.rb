@@ -120,6 +120,75 @@ module SharedHelperContext
     puts " [ #{msg} ] ".center(120, chr)
   end
 
+  shared_examples 'a thread-safe queue' do
+    let(:msg) { 'some message' }
+    let!(:queue) { described_class.new }
+    let!(:ary) { Concurrent::Array.new }
+
+    context 'basic' do
+      it 'initialized without throwing an error' do
+        expect { described_class.new }.to_not raise_error
+      end
+      it 'throws an exception on empty non_block pop' do
+        expect { queue.pop(true) }.to raise_error ThreadError, 'queue empty'
+      end
+      it 'blocks on empty blocking pop' do
+        ary = Concurrent::Array.new
+        thr = Thread.new { ary << queue.pop(false) }
+        expect(ary.size).to eq 0
+
+        queue.push msg
+        thr.join
+
+        expect(ary.size).to eq 1
+      end
+    end
+    context 'with 2 threads' do
+      let(:qty) { 100_000 }
+      let(:exp) { qty.times.map { |x| 'msg%05i' % [x + 1] } }
+      let(:extra1) { ary.sort - exp }
+      let(:extra2) { exp - ary.sort }
+      it 'can push and pop' do
+        thr_read_and_write exp, queue, ary
+
+        expect(ary.size).to eq qty
+        expect(extra1).to eq []
+        expect(extra2).to eq []
+      end
+    end
+  end
+
+  def thr_write(rows, q, a, qty = rows.size, offset = 0)
+    Thread.new do
+      rows[offset, qty].each do |row|
+        q.push row
+        # Nsq.logger.debug '%-20.20s | %-10.10s | %5i | %s' % [described_class.name, 'writer', a.size, row.to_s]
+      end
+    end
+  end
+
+  def thr_read(qty, q, a, non_block = false)
+    Thread.new do
+      qty.times do
+        row = q.pop non_block
+        a << row
+        # Nsq.logger.debug '%-20.20s | %-10.10s | %5i | %s' % [described_class.name, 'reader', a.size, row.to_s]
+      end
+    end
+  end
+
+  def thr_read_and_write(exp, q, a, non_block = false)
+    start_time = Time.now
+    threads    = []
+    threads << thr_write(exp, q, a)
+    threads << thr_read(exp.size, q, a, non_block)
+    threads.map { |x| x.join }
+    end_time  = Time.now
+    took_time = end_time - start_time
+    ms        = (exp.size / took_time / 60.0).to_i
+    puts '%-20.20s | Took %.2fs to process %i messages (%imsg/m)' % [described_class, took_time, exp.size, ms]
+  end
+
 end
 
 RSpec.configure do |config|

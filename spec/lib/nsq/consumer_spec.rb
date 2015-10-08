@@ -27,7 +27,7 @@ describe Nsq::Consumer do
         connection.pub consumer.topic, 'some-message'
         assert_no_timeout(1) do
           msg = consumer.pop
-          expect(msg.body).to eq('some-message')
+          expect(msg.body).to eq 'some-message'
           msg.finish
         end
       end

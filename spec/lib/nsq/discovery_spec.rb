@@ -13,7 +13,7 @@ describe Nsq::Discovery do
     end
   end
 
-  describe 'a single nsqlookupd', focus: true do
+  describe 'a single nsqlookupd' do
     let(:discovery) { new_discovery cluster.lookupds.first }
     describe '#nsqds' do
       it 'returns all nsqds' do

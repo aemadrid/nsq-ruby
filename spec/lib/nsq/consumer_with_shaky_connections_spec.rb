@@ -70,7 +70,7 @@ describe Nsq::Consumer do
       msg.finish
     end
   end
-  it 'should be able to handle all queues going offline and coming back', focus: true do
+  it 'should be able to handle all queues going offline and coming back' do
     consumer
     expected_messages = cluster.nsqds.map { |nsqd| nsqd.tcp_port.to_s }
 
