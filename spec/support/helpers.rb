@@ -99,7 +99,7 @@ module SharedHelperContext
   #   wait_for { @consumer.queue.length > 0 }
   #
   def wait_for(timeout = 5, msg = 'process', interval = 0.25, &block)
-    res        = nil
+    res        = false
     start_time = Time.now
     deadline   = start_time + timeout
 
@@ -111,8 +111,8 @@ module SharedHelperContext
     end_time = Time.now
     took     = end_time - start_time
 
-    Nsq.logger.debug 'Took %is (%is max)%s...' % [took, timeout.to_f, (msg ? " to #{msg}" : '')]
-    expect(took).to be <= timeout, "expected for #{msg} to take less than #{timeout}s but took #{took}s"
+    fail "did not return a value in ##{timeout}s for #{msg}" unless res
+    puts "we found what we were looking for in #{msg}"
     [took, res]
   end
 
@@ -141,6 +141,22 @@ module SharedHelperContext
         thr.join
 
         expect(ary.size).to eq 1
+      end
+      it 'responds to empty?/push/pop' do
+        expect(queue.empty?).to be_truthy
+        queue.push 1
+        expect(queue.empty?).to be_falsey
+        res = queue.pop
+        expect(res).to eq 1
+        expect(queue.empty?).to be_truthy
+      end
+      it 'responds to size/push/pop' do
+        expect(queue.size).to eq 0
+        queue.push 1
+        expect(queue.size).to eq 1
+        res = queue.pop
+        expect(res).to eq 1
+        expect(queue.size).to eq 0
       end
     end
     context 'with 2 threads' do
@@ -187,6 +203,22 @@ module SharedHelperContext
     took_time = end_time - start_time
     ms        = (exp.size / took_time / 60.0).to_i
     puts '%-20.20s | Took %.2fs to process %i messages (%imsg/m)' % [described_class, took_time, exp.size, ms]
+  end
+
+  shared_examples 'a basic successful http producer response' do
+    it('type    ') { expect(res).to be_a Nsq::HttpProducer::Response }
+    it('code    ') { expect(res.code).to eq 200 }
+    it('status  ') { expect(res.status).to eq 'OK' }
+    it('response') { expect(res.response).to eq 'OK' }
+    it('data    ') { expect(res.data).to be_nil }
+    it('success?') { expect(res.success?).to be_truthy }
+  end
+
+  shared_examples 'a simple successful http producer response' do
+    it('type    ') { expect(res).to be_a Nsq::HttpProducer::Response }
+    it('code    ') { expect(res.code).to eq 200 }
+    it('status  ') { expect(res.status).to eq 'OK' }
+    it('success?') { expect(res.success?).to be_truthy }
   end
 
 end

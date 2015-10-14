@@ -28,6 +28,7 @@ describe Nsq::Consumer do
   it 'should continue processing messages from live queues when one queue is down' do
     # shut down the last nsqd
     cluster.nsqds.last.stop
+    wait_for(10, 'all connections up') { consumer.connections.length == nsqd_count - 1 }
 
     # make sure there are more messages on each queue than max in flight
     cluster.nsqds[0].conn { |x| 50.times { x.pub topic, 'hay' } }
@@ -64,7 +65,7 @@ describe Nsq::Consumer do
     nsqd.conn { |x| x.pub 'new-topic', 'new message on new topic' }
     consumer = new_consumer topic: 'new-topic'
 
-    assert_no_timeout do
+    assert_no_timeout(5) do
       msg = consumer.pop
       expect(msg.body).to eq('new message on new topic')
       msg.finish

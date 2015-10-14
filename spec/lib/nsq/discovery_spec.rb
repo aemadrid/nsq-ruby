@@ -1,4 +1,4 @@
-describe Nsq::Discovery do
+describe Nsq::Discovery, focus: true do
   let(:nsqd_count) { 5 }
   let(:topic) { 'some-topic' }
   let(:cluster_options) { { nsqds: nsqd_count, lookupds: 2 } }

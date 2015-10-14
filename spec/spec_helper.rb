@@ -33,9 +33,6 @@ RSpec.configure do |c|
   c.before(:suite) do
     if ENV['VERBOSE'] == 'true'
       Nsq.logger = Logger.new(STDOUT).tap { |x| x.level = Logger::DEBUG }
-      Nsq.logger.debug "debugging..."
-      Nsq.logger.info "infoing..."
-      Nsq.logger.error "erroring..."
     end
   end
 

@@ -1,11 +1,11 @@
-describe ::Queue, focus: true do
+describe ::Queue do
   it_behaves_like 'a thread-safe queue'
 end
 
-describe Nsq::BasicQueue, focus: true do
+describe Nsq::Queues::Basic do
   it_behaves_like 'a thread-safe queue'
 end
 
-describe Nsq::LockFreeQueue, focus: true do
+describe Nsq::Queues::LockFree do
   it_behaves_like 'a thread-safe queue'
 end

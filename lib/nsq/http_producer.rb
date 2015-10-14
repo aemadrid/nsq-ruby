@@ -20,7 +20,7 @@ module Nsq
       def data=(value)
         case value
           when Hash
-            @data = build_data value
+            @data = self.class.build_data value
           else
             @data = value
         end
@@ -30,9 +30,13 @@ module Nsq
         status.to_s == 'OK'
       end
 
-      private
+      def to_s
+        %{%<#{self.class.name} code=#{code} status=#{status.inspect}>}
+      end
 
-      def build_data(hsh, klass = OpenStruct)
+      alias :inspect :to_s
+
+      def self.build_data(hsh, klass = OpenStruct)
         klass.new.tap do |resp|
           hsh.each do |key, value|
             resp[key] = value.is_a?(Hash) ? build_data(value, klass) : value
@@ -64,6 +68,10 @@ module Nsq
       send_message :post, :create_topic, params: { topic: topic }
     end
 
+    def empty_topic
+      send_message :post, :empty_topic, params: { topic: topic }
+    end
+
     def delete_topic
       send_message :post, :delete_topic, params: { topic: topic }
     end
@@ -72,16 +80,12 @@ module Nsq
       send_message :post, :create_channel, params: { topic: topic, channel: chan }
     end
 
-    def delete_channel(chan)
-      send_message :post, :delete_channel, params: { topic: topic, channel: chan }
-    end
-
-    def empty_topic
-      send_message :post, :empty_topic, params: { topic: topic }
-    end
-
     def empty_channel(chan)
       send_message :post, :empty_channel, params: { topic: topic, channel: chan }
+    end
+
+    def delete_channel(chan)
+      send_message :post, :delete_channel, params: { topic: topic, channel: chan }
     end
 
     def pause_channel(chan)
@@ -92,8 +96,19 @@ module Nsq
       send_message :post, :unpause_channel, params: { topic: topic, channel: chan }
     end
 
-    def stats(format = 'json')
-      send_message :get, :stats, params: { format: format }
+    def stats
+      send_message :get, :stats, params: { format: 'json' }
+    end
+
+    def topic_stats(topic_name = topic)
+      found = stats.data.topics.select { |hsh| hsh['topic_name'] == topic_name }.first
+      Response.build_data found || {}
+    end
+
+    def channel_stats(channel_name, topic_name = topic)
+      topic_data = topic_stats topic_name
+      found = topic_data.channels.select { |hsh| hsh['channel_name'] == channel_name }.first
+      Response.build_data found || {}
     end
 
     def ping
@@ -110,8 +125,8 @@ module Nsq
       build      = uri.dup
       build.path = "/#{path}"
       begin
-        response   = HTTP.send method, build.to_s, args.merge(config)
-        hsh = MultiJson.load response.body.to_s
+        response = HTTP.send method, build.to_s, args.merge(config)
+        hsh      = MultiJson.load response.body.to_s
       rescue Errno::ECONNREFUSED
         hsh = {
           'status_code' => '500',

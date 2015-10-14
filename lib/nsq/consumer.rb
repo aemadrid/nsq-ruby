@@ -60,6 +60,10 @@ module Nsq
       @messages.size
     end
 
+    def empty?
+      @messages.empty?
+    end
+
     private
 
     def add_connection(nsqd, options = {})

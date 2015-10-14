@@ -232,7 +232,7 @@ module Nsq
       loop do
         data = @write_queue.pop
         write_to_socket(data)
-        break if @stop_write_loop && @write_queue.size == 0
+        break if @stop_write_loop && @write_queue.empty?
       end
     rescue Exception => ex
       # requeue PUB and MPUB commands

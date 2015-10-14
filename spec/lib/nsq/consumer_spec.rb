@@ -92,19 +92,24 @@ describe Nsq::Consumer do
     let!(:consumer_options) { { nsqlookupd: nil, nsqd: nsqd_url, msg_timeout: msg_timeout * 1000 } }
     # This testing that our msg_timeout is being honored
     it 'should give us the same message over and over' do
+      puts 'running ...'
       connection.pub topic, 'slow'
+      puts 'published ...'
 
-      msg1 = consumer.pop
+      msg1 = consumer.pop false
+      puts 'polled ...'
       expect(msg1.body).to eq('slow')
       expect(msg1.attempts).to eq(1)
 
       # wait for it to be reclaimed by nsqd and then finish it so we can get another. this fin won't actually succeed,
       # because the message is no longer in flight
-      sleep(msg_timeout + 0.1)
+      sleep(msg_timeout + 0.5)
       msg1.finish
+      puts 'finished ...'
 
       assert_no_timeout do
-        msg2 = consumer.pop
+        msg2 = consumer.pop false
+        puts 'polled again ...'
         expect(msg2.body).to eq('slow')
         expect(msg2.attempts).to eq(2)
       end
