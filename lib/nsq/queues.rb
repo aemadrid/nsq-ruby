@@ -50,7 +50,8 @@ module Nsq
 
   def queue_class
     # @queue_class || ::Queue
-    @queue_class || Queues::LockFree
+    @queue_class || Queues::Basic
+    # @queue_class || Queues::LockFree
   end
 
   def queue_class=(value)
